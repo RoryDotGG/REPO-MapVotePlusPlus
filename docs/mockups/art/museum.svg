@@ -1,0 +1,5 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 40' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'>
+<!-- Stand-in line art for a museum -->
+<path d="M2 38H70"/><path d="M10 38V24H62V38"/><path d="M8 24C16 6 30 4 36 12C42 4 56 6 64 24"/>
+<path d="M20 38V28M28 38V28M44 38V28M52 38V28"/><path d="M33 38V30H39V38"/>
+</svg>

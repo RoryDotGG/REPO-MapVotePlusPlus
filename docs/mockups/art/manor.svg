@@ -1,0 +1,7 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 40' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'>
+<!-- Stand-in line art for a manor (the real thumbnails are each level's loading-screen art) -->
+<path d="M2 38H70"/><path d="M14 38V19H58V38"/><path d="M10 20L36 5L62 20"/>
+<path d="M4 38V25H14"/><path d="M2 26L9 20L14 23"/><path d="M68 38V25H58"/><path d="M70 26L63 20L58 23"/>
+<path d="M45 11V5H49V13"/><rect x="32" y="29" width="8" height="9"/>
+<path d="M20 24h6v5h-6zM46 24h6v5h-6zM33 13h6v5h-6z" fill="white" stroke="none"/>
+</svg>

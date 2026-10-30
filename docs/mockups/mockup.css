@@ -29,11 +29,22 @@ body { position: relative; }
 .rows { --w: 290px; position: absolute; left: 10px; width: var(--w); }
 .row { position: relative; height: 24px; }
 .row i { position: absolute; left: 0; top: 4.8px; width: 3px; height: 14.4px; }
-.row b { position: absolute; left: 8px; top: 0; font: 400 18px/25px Teko, sans-serif; color: #808080; white-space: nowrap; }
+.row .thumb {
+  position: absolute; left: 6px; top: 2px; width: 36px; height: 20px;
+  background-position: center; background-size: cover; background-repeat: no-repeat;
+}
+.row .thumb.random { background: rgba(255, 179, 26, 0.22); color: #ffb31a; text-align: center; font: 400 17px/23px Teko, sans-serif; }
+.row b { position: absolute; left: 48px; top: 0; font: 400 18px/25px Teko, sans-serif; color: #808080; white-space: nowrap; }
 .row em {
-  position: absolute; left: calc(var(--w) * 0.55); width: calc(var(--w) * 0.45 - 34px); top: 0; text-align: right;
+  position: absolute; left: calc(var(--w) * 0.62); width: calc(var(--w) * 0.38 - 34px); top: 0; text-align: right;
   font: normal 400 11.2px/25px Teko, sans-serif; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden;
 }
 .row s { position: absolute; right: 0; width: 28px; top: 0; text-align: right; text-decoration: none; font: 400 18px/25px Teko, sans-serif; color: #f3eee4; }
+/* Stand-ins for each level's loading-screen art, which is what the game shows in the thumbnail. */
+.art-manor { background-image: url("art/manor.svg"); }
+.art-academy { background-image: url("art/academy.svg"); }
+.art-station { background-image: url("art/station.svg"); }
+.art-museum { background-image: url("art/museum.svg"); }
+.art-mall { background-image: url("art/mall.svg"); }
 .row.picked b { color: #ffb31a; }
 .row.hover b { color: #ffffff; }

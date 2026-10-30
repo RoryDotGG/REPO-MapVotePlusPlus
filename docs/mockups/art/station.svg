@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 40' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'>
+<!-- Stand-in line art for a station -->
+<path d="M2 38H70"/><path d="M6 38V20H40V38"/><path d="M4 20H42"/><path d="M40 38V27H66V38"/>
+<path d="M18 20V14"/><path d="M10 9A9 9 0 0 0 26 15"/><path d="M18 14L22 9"/><path d="M58 27V7M54 11h8M55 16h6"/>
+<path d="M10 25h6v4h-6zM20 25h6v4h-6zM30 25h6v4h-6zM45 31h5v4h-5zM55 31h5v4h-5z" fill="white" stroke="none"/>
+</svg>
