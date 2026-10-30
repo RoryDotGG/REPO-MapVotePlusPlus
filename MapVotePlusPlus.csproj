@@ -9,6 +9,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <DebugType>embedded</DebugType>
+    <!-- GameLibs is publicised, so private game members compile. This marks the module unverifiable,
+         which makes the game's Mono skip its access checks (otherwise FieldAccessException at runtime). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RestoreAdditionalProjectSources>
       https://api.nuget.org/v3/index.json;
       https://nuget.bepinex.dev/v3/index.json
