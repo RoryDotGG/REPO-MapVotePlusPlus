@@ -11,8 +11,8 @@ namespace MapVote;
 [BepInDependency("REPOLib", BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
 {
-    public const string Guid = "RoryDotGG.MapVote";
-    public const string Name = "MapVote";
+    public const string Guid = "RoryDotGG.MapVotePlusPlus";
+    public const string Name = "MapVote++";
     public const string Version = "1.0.0";
 
     internal static ManualLogSource Log = null!;
@@ -35,7 +35,7 @@ public class Plugin : BaseUnityPlugin
         new Harmony(Guid).PatchAll(typeof(Patches));
 
         // The BepInEx manager object is not safe to hang UI off in R.E.P.O.; use our own persistent object.
-        var host = new GameObject("MapVote");
+        var host = new GameObject("MapVotePlusPlus");
         host.hideFlags = HideFlags.HideAndDontSave;
         DontDestroyOnLoad(host);
         host.AddComponent<VoteUi>();

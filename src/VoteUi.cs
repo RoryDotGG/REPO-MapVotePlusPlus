@@ -486,7 +486,7 @@ internal sealed class VoteUi : MonoBehaviour
 
     private void Build()
     {
-        var canvasGo = new GameObject("MapVoteCanvas");
+        var canvasGo = new GameObject("MapVotePlusPlusCanvas");
         canvasGo.transform.SetParent(transform, false);
         _canvas = canvasGo.AddComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -526,7 +526,7 @@ internal sealed class VoteUi : MonoBehaviour
 
         var title = Ui.Label("Title", _board, 46f, Ui.Amber, TextAlignmentOptions.TopLeft);
         title.rectTransform.Place(new Vector2(0, 1), new Vector2(28, -20), new Vector2(360, 52));
-        title.text = "MAP VOTE";
+        title.text = "MAP VOTE++";
         title.characterSpacing = 6f;
 
         _subtitle = Ui.Label("Subtitle", _board, 16f, Ui.Muted, TextAlignmentOptions.TopLeft);
