@@ -30,6 +30,20 @@
     <PackageReference Include="Zehs.REPOLib" Version="4.3.0" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- MenuLib isn't on NuGet, so fetch the pinned Thunderstore release at build time. It's GPL-3.0, so it isn't committed here. -->
+  <PropertyGroup>
+    <MenuLibVersion>2.6.0</MenuLibVersion>
+    <MenuLibDir>$(MSBuildProjectDirectory)/obj/thunderstore/MenuLib-$(MenuLibVersion)</MenuLibDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MenuLib" HintPath="$(MenuLibDir)/MenuLib.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="FetchMenuLib" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(MenuLibDir)/MenuLib.dll')">
+    <DownloadFile SourceUrl="https://thunderstore.io/package/download/REPOModding/MenuLib/$(MenuLibVersion)/"
+                  DestinationFolder="$(MenuLibDir)" DestinationFileName="MenuLib.zip" />
+    <Unzip SourceFiles="$(MenuLibDir)/MenuLib.zip" DestinationFolder="$(MenuLibDir)" />
+  </Target>
+
   <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(PluginsDir)' != ''">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsDir)/MapVotePlusPlus" />
   </Target>

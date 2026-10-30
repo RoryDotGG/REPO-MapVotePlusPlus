@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using MenuLib;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,7 @@ namespace MapVote;
 
 [BepInPlugin(Guid, Name, Version)]
 [BepInDependency("REPOLib", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency("nickklmao.menulib", BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "RoryDotGG.MapVotePlusPlus";
@@ -32,6 +34,7 @@ public class Plugin : BaseUnityPlugin
         VoteInTruck = Config.Bind("Voting", "VoteInTruck", true, "Show the vote in the truck between levels.");
 
         VoteSession.RegisterEvents();
+        MenuAPI.AddElementToLobbyMenu(NativeBoard.BuildLobby);
         new Harmony(Guid).PatchAll(typeof(Patches));
 
         // The BepInEx manager object is not safe to hang UI off in R.E.P.O.; use our own persistent object.
