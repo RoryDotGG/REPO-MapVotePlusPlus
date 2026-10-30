@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using MenuLib;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,6 +10,7 @@ namespace MapVote;
 
 [BepInPlugin(Guid, Name, Version)]
 [BepInDependency("REPOLib", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency("nickklmao.menulib", BepInDependency.DependencyFlags.HardDependency)]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "RoryDotGG.MapVotePlusPlus";
@@ -24,14 +26,15 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log = Logger;
-        ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote board.");
+        ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote in the truck. In the lobby it's always on screen.");
         VoteSeconds = Config.Bind("Voting", "VoteSeconds", 25,
-            new ConfigDescription("Seconds the vote stays open after the first ballot. Ends early once everyone has voted. Host's value is used.",
+            new ConfigDescription("Truck only: seconds the vote stays open after the first ballot. Ends early once everyone has voted. The lobby vote stays open until the host presses Start. Host's value is used.",
                 new AcceptableValueRange<int>(5, 120)));
         VoteInLobbyMenu = Config.Bind("Voting", "VoteInLobbyMenu", true, "Show the vote in the pre-game lobby menu.");
         VoteInTruck = Config.Bind("Voting", "VoteInTruck", true, "Show the vote in the truck between levels.");
 
         VoteSession.RegisterEvents();
+        MenuAPI.AddElementToLobbyMenu(NativeBoard.BuildLobby);
         new Harmony(Guid).PatchAll(typeof(Patches));
 
         // The BepInEx manager object is not safe to hang UI off in R.E.P.O.; use our own persistent object.

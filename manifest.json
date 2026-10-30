@@ -5,6 +5,7 @@
   "description": "Vote for the next map in the truck or the lobby. Works with custom maps. No votes = random, partial votes = drawn only from what people picked.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305",
-    "Zehs-REPOLib-4.3.0"
+    "Zehs-REPOLib-4.3.0",
+    "REPOModding-MenuLib-2.6.0"
   ]
 }

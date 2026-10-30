@@ -1,0 +1,50 @@
+/* Shared by the mock-ups. Everything inside .stage is in the game's 720x405 menu units, scaled to the page. */
+/* Bebas Neue for the MapVote++ brand text, Oswald for the lobby title, Teko for the game's menu font. */
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@700&family=Teko:wght@400;500;600&display=block");
+
+html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: #000; }
+/* Headless Chromium has a minimum window width, so lay out against the body rather than the viewport. */
+body { position: relative; }
+
+.stage {
+  position: absolute; left: 0; top: 0; width: 720px; height: 405px; overflow: hidden;
+  transform: scale(1.777778); transform-origin: 0 0;
+  font-family: Teko, sans-serif;
+}
+
+.tag {
+  position: absolute; right: 10px; top: 10px; padding: 4px 9px; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.78); color: #f3eee4; font: 500 13px/1.2 system-ui, sans-serif;
+}
+
+/* The game's menu cursor (traced from an in-game screenshot), 18 menu units across. */
+.cursor { position: absolute; width: 18px; height: 17.3px; overflow: visible; }
+.cursor polygon { fill: #ef8e08; filter: drop-shadow(0.6px 1px 0 rgba(0, 0, 0, 0.6)); }
+
+/* NativeBoard: panel, header, rows. Values mirror the constants in src/NativeBoard.cs. */
+.vote { position: absolute; background: rgba(0, 0, 0, 0.62); }
+.vote-title { position: absolute; left: 10px; top: 9px; font: 400 24px/30px Teko, sans-serif; color: #ffb31a; }
+.vote-status { position: absolute; left: 10px; top: 39px; font: 400 11px/16px Teko, sans-serif; letter-spacing: 0.3px; color: #8e887e; }
+.vote-line { position: absolute; left: 10px; top: 57.5px; width: 290px; height: 1.5px; background: rgba(255, 179, 26, 0.8); }
+.rows { --w: 290px; position: absolute; left: 10px; width: var(--w); }
+.row { position: relative; height: 24px; }
+.row i { position: absolute; left: 0; top: 4.8px; width: 3px; height: 14.4px; }
+.row .thumb {
+  position: absolute; left: 6px; top: 2px; width: 36px; height: 20px;
+  background-position: center; background-size: cover; background-repeat: no-repeat;
+}
+.row .thumb.random { background: rgba(255, 179, 26, 0.22); color: #ffb31a; text-align: center; font: 400 17px/23px Teko, sans-serif; }
+.row b { position: absolute; left: 48px; top: 0; font: 400 18px/25px Teko, sans-serif; color: #808080; white-space: nowrap; }
+.row em {
+  position: absolute; left: calc(var(--w) * 0.62); width: calc(var(--w) * 0.38 - 34px); top: 0; text-align: right;
+  font: normal 400 11.2px/25px Teko, sans-serif; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden;
+}
+.row s { position: absolute; right: 0; width: 28px; top: 0; text-align: right; text-decoration: none; font: 400 18px/25px Teko, sans-serif; color: #f3eee4; }
+/* Stand-ins for each level's loading-screen art, which is what the game shows in the thumbnail. */
+.art-manor { background-image: url("art/manor.svg"); }
+.art-academy { background-image: url("art/academy.svg"); }
+.art-station { background-image: url("art/station.svg"); }
+.art-museum { background-image: url("art/museum.svg"); }
+.art-mall { background-image: url("art/mall.svg"); }
+.row.picked b { color: #ffb31a; }
+.row.hover b { color: #ffffff; }

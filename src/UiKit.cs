@@ -12,13 +12,9 @@ internal static class Ui
 {
     // R.E.P.O.'s UI is warm amber on near-black with chunky uppercase type; stay in that family.
     public static readonly Color Panel = Hex("0D0D10F2");
-    public static readonly Color Row = Hex("1A1A1F");
-    public static readonly Color RowHover = Hex("26262D");
     public static readonly Color Text = Hex("F3EEE4");
     public static readonly Color Muted = Hex("8E887E");
-    public static readonly Color Faint = Hex("FFFFFF14");
     public static readonly Color Amber = Hex("FFB31A");
-    public static readonly Color Hot = Hex("FF5A1F");
     public static readonly Color Ink = Hex("141414");
 
     private static readonly Color[] PlayerColors =
@@ -26,13 +22,10 @@ internal static class Ui
         Hex("FFB31A"), Hex("4FD1C5"), Hex("F56565"), Hex("9F7AEA"), Hex("68D391"), Hex("63B3ED"), Hex("F687B3"), Hex("F6E05E"),
     };
 
-    private static Sprite? _rounded, _roundedSmall, _ring, _dot, _fade, _hazard;
+    private static Sprite? _rounded, _roundedSmall, _fade;
     public static Sprite Rounded => _rounded ??= MakeRounded(64, 14);
     public static Sprite RoundedSmall => _roundedSmall ??= MakeRounded(32, 6);
-    public static Sprite Ring => _ring ??= MakeCircle(128, 9);
-    public static Sprite Dot => _dot ??= MakeCircle(64, 0);
     public static Sprite FadeRight => _fade ??= MakeFade(64);
-    public static Sprite Hazard => _hazard ??= MakeHazard(32);
 
     private static TMP_FontAsset? _font;
     private static readonly List<TextMeshProUGUI> Texts = new();
@@ -47,17 +40,12 @@ internal static class Ui
     public static float Damp(float current, float target, float speed) =>
         Mathf.Lerp(current, target, 1f - Mathf.Exp(-speed * Time.unscaledDeltaTime));
 
-    public static Vector2 Mouse => UnityEngine.InputSystem.Mouse.current?.position.ReadValue() ?? Vector2.negativeInfinity;
-
-    public static bool Hovered(RectTransform rect) =>
-        rect.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(rect, Mouse, null);
-
     public static bool KeyDown(Key key) => Keyboard.current != null && key != Key.None && Keyboard.current[key].wasPressedThisFrame;
 
     public static RectTransform Rect(string name, Transform parent)
     {
         var go = new GameObject(name, typeof(RectTransform));
-        go.layer = 5; // UI
+        go.layer = parent.gameObject.layer; // whatever camera draws the parent draws this too
         var rect = (RectTransform)go.transform;
         rect.SetParent(parent, false);
         return rect;
@@ -76,8 +64,9 @@ internal static class Ui
         return img;
     }
 
+    /// <summary>A label in the game's font. Pass <paramref name="font"/> to pin one (menu labels) instead of following ours.</summary>
     public static TextMeshProUGUI Label(string name, Transform parent, float size, Color color,
-        TextAlignmentOptions align = TextAlignmentOptions.MidlineLeft, FontStyles style = FontStyles.Bold)
+        TextAlignmentOptions align = TextAlignmentOptions.MidlineLeft, FontStyles style = FontStyles.Bold, TMP_FontAsset? font = null)
     {
         var tmp = Rect(name, parent).gameObject.AddComponent<TextMeshProUGUI>();
         tmp.fontSize = size;
@@ -88,6 +77,16 @@ internal static class Ui
         tmp.overflowMode = TextOverflowModes.Ellipsis;
         tmp.raycastTarget = false;
         tmp.richText = true;
+        // R.E.P.O.'s font has tall ascenders, and with Ellipsis TMP draws nothing at all once a line is taller than
+        // its rect. Grow the text area away from the aligned edge so only horizontal overflow truncates.
+        // TMP keeps the vertical part of the alignment in the high byte: Top = 0x100, Bottom = 0x400.
+        int vertical = (int)align & 0xFF00;
+        tmp.margin = new Vector4(0, vertical == 0x100 ? 0 : -size, 0, vertical == 0x400 ? 0 : -size);
+        if (font)
+        {
+            tmp.font = font;
+            return tmp;
+        }
         if (_font) tmp.font = _font;
         if (Texts.Count > 256) Texts.RemoveAll(t => !t);
         Texts.Add(tmp);
@@ -146,8 +145,11 @@ internal static class Ui
         }
     }
 
-    public static void Tick(float pitch = 1f) =>
-        Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Tick, null, pitch, 0.6f, soundOnly: true));
+    /// <summary>The game's menu click sound. Bound by name: its signature changes between game updates.</summary>
+    public static void Click(MenuManager.MenuClickEffectType type, float pitch = -1f, float volume = -1f) =>
+        Sound(m => Compat.Call(m, nameof(MenuManager.MenuEffectClick), type, null, pitch, volume, true));
+
+    public static void Tick(float pitch = 1f) => Click(MenuManager.MenuClickEffectType.Tick, pitch, 0.6f);
 
     // ---- procedural sprites -------------------------------------------------------------
 
@@ -178,44 +180,10 @@ internal static class Ui
         return Finish(tex, new Vector4(radius, radius, radius, radius));
     }
 
-    /// <summary>Filled disc when thickness is 0, otherwise a ring (for radial countdowns).</summary>
-    private static Sprite MakeCircle(int size, int thickness)
-    {
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        float r = size / 2f - 1f;
-        for (int y = 0; y < size; y++)
-        for (int x = 0; x < size; x++)
-        {
-            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(size / 2f, size / 2f));
-            float outer = Mathf.Clamp01(r - d + 0.5f);
-            float inner = thickness > 0 ? Mathf.Clamp01(d - (r - thickness) + 0.5f) : 1f;
-            tex.SetPixel(x, y, new Color(1, 1, 1, outer * inner));
-        }
-        return Finish(tex, Vector4.zero);
-    }
-
     private static Sprite MakeFade(int width)
     {
         var tex = new Texture2D(width, 1, TextureFormat.RGBA32, false);
         for (int x = 0; x < width; x++) tex.SetPixel(x, 0, new Color(1, 1, 1, Mathf.SmoothStep(0, 1, x / (width - 1f))));
         return Finish(tex, Vector4.zero);
-    }
-
-    /// <summary>Diagonal warning stripes, tiled. White/clear so the Image colour tints it.</summary>
-    private static Sprite MakeHazard(int size)
-    {
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat };
-        for (int y = 0; y < size; y++)
-        for (int x = 0; x < size; x++)
-        {
-            float band = Mathf.Repeat(x + y, size) / size;
-            float a = Mathf.Clamp01((Mathf.Abs(band - 0.5f) - 0.25f) * size * 0.5f + 0.5f);
-            tex.SetPixel(x, y, new Color(1, 1, 1, a));
-        }
-        tex.Apply(false, false);
-        tex.hideFlags = HideFlags.HideAndDontSave;
-        var sprite = UnityEngine.Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
-        sprite.hideFlags = HideFlags.HideAndDontSave;
-        return sprite;
     }
 }

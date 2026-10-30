@@ -9,6 +9,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <DebugType>embedded</DebugType>
+    <!-- GameLibs is publicised, so private game members compile. This marks the module unverifiable,
+         which makes the game's Mono skip its access checks (otherwise FieldAccessException at runtime). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RestoreAdditionalProjectSources>
       https://api.nuget.org/v3/index.json;
       https://nuget.bepinex.dev/v3/index.json
@@ -26,6 +29,20 @@
     <PackageReference Include="R.E.P.O.GameLibs.Steam" Version="0.4.4-ngd.0" PrivateAssets="all" />
     <PackageReference Include="Zehs.REPOLib" Version="4.3.0" PrivateAssets="all" />
   </ItemGroup>
+
+  <!-- MenuLib isn't on NuGet, so fetch the pinned Thunderstore release at build time. It's GPL-3.0, so it isn't committed here. -->
+  <PropertyGroup>
+    <MenuLibVersion>2.6.0</MenuLibVersion>
+    <MenuLibDir>$(MSBuildProjectDirectory)/obj/thunderstore/MenuLib-$(MenuLibVersion)</MenuLibDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MenuLib" HintPath="$(MenuLibDir)/MenuLib.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="FetchMenuLib" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(MenuLibDir)/MenuLib.dll')">
+    <DownloadFile SourceUrl="https://thunderstore.io/package/download/REPOModding/MenuLib/$(MenuLibVersion)/"
+                  DestinationFolder="$(MenuLibDir)" DestinationFileName="MenuLib.zip" />
+    <Unzip SourceFiles="$(MenuLibDir)/MenuLib.zip" DestinationFolder="$(MenuLibDir)" />
+  </Target>
 
   <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(PluginsDir)' != ''">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsDir)/MapVotePlusPlus" />

@@ -1,0 +1,5 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 40' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round'>
+<!-- Stand-in line art for a mall -->
+<path d="M2 38H70"/><path d="M6 38V16H66V38"/><rect x="22" y="8" width="28" height="8"/><path d="M27 12H45"/>
+<path d="M6 24H66"/><path d="M30 38V29H42V38M36 29V38"/><rect x="10" y="28" width="12" height="6"/><rect x="50" y="28" width="12" height="6"/>
+</svg>
