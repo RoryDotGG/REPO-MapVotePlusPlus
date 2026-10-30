@@ -43,7 +43,7 @@ The reveal and the truck's HUD box sit on top of the game:
 - Click your pick again to clear your vote.
 - **Lobby:** there's no timer. Anyone can vote or change their vote, including players who join late, until the host presses **Start Game**. The reveal then plays, and the game starts once it lands.
 - **Truck:** the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If the truck leaves before the timer ends, the vote resolves instantly with the same rules.
-- The reveal is a slot-machine reel at the top of the screen that lands on the next map for everyone at once. The board doesn't show the winner until the reel lands.
+- The reveal is a slot-machine reel at the top of the screen that lands on the next map for everyone at once. The vote list doesn't show the winner until the reel lands.
 
 ## Install
 
@@ -59,7 +59,7 @@ Everyone in the lobby needs the mod. The host runs the vote.
 
 | Key | Default | Notes |
 | --- | --- | --- |
-| `Controls.ToggleKey` | `M` | Any Unity Input System key name. |
+| `Controls.ToggleKey` | `M` | Opens the vote in the truck. Any Unity Input System key name. |
 | `Voting.VoteSeconds` | `25` | 5 to 120. The host's value is used. |
 | `Voting.VoteInLobbyMenu` | `true` | |
 | `Voting.VoteInTruck` | `true` | |

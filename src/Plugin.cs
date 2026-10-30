@@ -26,7 +26,7 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Log = Logger;
-        ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote board.");
+        ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote in the truck. In the lobby it's always on screen.");
         VoteSeconds = Config.Bind("Voting", "VoteSeconds", 25,
             new ConfigDescription("Truck only: seconds the vote stays open after the first ballot. Ends early once everyone has voted. The lobby vote stays open until the host presses Start. Host's value is used.",
                 new AcceptableValueRange<int>(5, 120)));
