@@ -2,7 +2,7 @@
   "name": "MapVotePlusPlus",
   "version_number": "1.0.0",
   "website_url": "https://github.com/RoryDotGG/REPO-MapVotePlusPlus",
-  "description": "Vote for the next map in the truck or the lobby. Works with custom maps. No votes = random, partial votes = drawn only from what people picked.",
+  "description": "Vote on the next map in the truck or the lobby. Works with custom maps. If nobody votes, the map is random; otherwise it's drawn from the maps people picked.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305",
     "Zehs-REPOLib-4.3.0",

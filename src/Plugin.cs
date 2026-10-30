@@ -28,7 +28,7 @@ public class Plugin : BaseUnityPlugin
         Log = Logger;
         ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote in the truck. In the lobby it's always on screen.");
         VoteSeconds = Config.Bind("Voting", "VoteSeconds", 25,
-            new ConfigDescription("Truck only: seconds the vote stays open after the first ballot. Ends early once everyone has voted. The lobby vote stays open until the host presses Start. Host's value is used.",
+            new ConfigDescription("Truck only: how many seconds the vote stays open after the first vote. It ends early once everyone has voted. The lobby vote stays open until the host presses Start Game. The host's value is used.",
                 new AcceptableValueRange<int>(5, 120)));
         VoteInLobbyMenu = Config.Bind("Voting", "VoteInLobbyMenu", true, "Show the vote in the pre-game lobby menu.");
         VoteInTruck = Config.Bind("Voting", "VoteInTruck", true, "Show the vote in the truck between levels.");

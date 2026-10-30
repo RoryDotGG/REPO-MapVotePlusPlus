@@ -47,4 +47,22 @@
   <Target Name="CopyToPlugins" AfterTargets="Build" Condition="'$(PluginsDir)' != ''">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsDir)/MapVotePlusPlus" />
   </Target>
+
+  <!-- Thunderstore zip: dotnet build -c Release -t:ThunderstorePackage. Files sit at the zip root; mod managers put the DLL in BepInEx/plugins. -->
+  <Target Name="ThunderstorePackage" DependsOnTargets="Build">
+    <PropertyGroup>
+      <PackageStageDir>$(MSBuildProjectDirectory)/obj/package</PackageStageDir>
+      <PackageZip>$(MSBuildProjectDirectory)/dist/$(AssemblyName)-$(Version).zip</PackageZip>
+      <ManifestVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/manifest.json')), '(?&lt;="version_number"\s*:\s*")[^"]+'))</ManifestVersion>
+      <PluginVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/src/Plugin.cs')), '(?&lt;=const string Version = ")[^"]+'))</PluginVersion>
+    </PropertyGroup>
+    <Error Condition="'$(Configuration)' != 'Release'" Text="Package a Release build: dotnet build -c Release -t:ThunderstorePackage" />
+    <Error Condition="'$(ManifestVersion)' != '$(Version)' Or '$(PluginVersion)' != '$(Version)'"
+           Text="Version mismatch: csproj $(Version), manifest.json '$(ManifestVersion)', Plugin.cs '$(PluginVersion)'. Bump all three." />
+    <RemoveDir Directories="$(PackageStageDir)" />
+    <Copy SourceFiles="manifest.json;icon.png;README.md;CHANGELOG.md;LICENSE;$(TargetPath)" DestinationFolder="$(PackageStageDir)" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)/dist" />
+    <ZipDirectory SourceDirectory="$(PackageStageDir)" DestinationFile="$(PackageZip)" Overwrite="true" />
+    <Message Importance="high" Text="Thunderstore package: $(PackageZip)" />
+  </Target>
 </Project>
