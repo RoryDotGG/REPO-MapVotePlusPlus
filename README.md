@@ -35,10 +35,9 @@
 | Lobby menu | The board docked on the right | Click a map. `M` hides or shows it. |
 
 - Right-click, or click your pick again, to clear your vote.
-- The countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted.
-- When it ends, a slot-machine reel spins at the top of the screen and lands on the next map for everyone at once.
-- In the lobby, pressing **Start** early plays the reveal first, then starts the game.
-- If the truck leaves before the timer ends, the vote resolves instantly with the same rules.
+- **Lobby:** there's no timer. Anyone can vote or change their vote, including players who join late, until the host presses **Start Game**. The reveal then plays, and the game starts once it lands.
+- **Truck:** the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If the truck leaves before the timer ends, the vote resolves instantly with the same rules.
+- The reveal is a slot-machine reel at the top of the screen that lands on the next map for everyone at once. The board doesn't show the winner until the reel lands.
 
 ## Install
 

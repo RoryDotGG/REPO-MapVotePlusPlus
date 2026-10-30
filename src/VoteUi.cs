@@ -43,6 +43,7 @@ internal sealed class VoteUi : MonoBehaviour
     private RectTransform _board = null!, _viewport = null!, _content = null!;
     private CanvasGroup _boardGroup = null!;
     private TextMeshProUGUI _subtitle = null!, _voted = null!, _timer = null!, _footer = null!;
+    private RectTransform _timerRoot = null!, _votedCaption = null!;
     private Image _timerRing = null!;
     private readonly List<RowView> _rows = new();
     private string _poolKey = "";
@@ -157,6 +158,10 @@ internal sealed class VoteUi : MonoBehaviour
         if (VoteSession.Phase == Phase.Revealing && VoteSession.Winner != null && _reelFor != VoteSession.Winner)
             StartReel(VoteSession.Winner, odds);
     }
+
+    /// <summary>The winner, but only once this client's reel has landed on it, so the list can't spoil the reveal.</summary>
+    private string? RevealedWinner =>
+        VoteSession.Phase == Phase.Revealing && (!_landed || _reelFor != VoteSession.Winner) ? null : VoteSession.Winner;
 
     private static string IdleLine(string choice)
     {
@@ -277,6 +282,7 @@ internal sealed class VoteUi : MonoBehaviour
         _subtitle.text = phase switch
         {
             Phase.Open when left >= 0f => voted >= players ? "EVERYONE'S IN. LOCKING..." : "VOTING CLOSES SOON",
+            Phase.Open when _context == VoteContext.LobbyMenu => "OPEN UNTIL THE HOST PRESSES START",
             Phase.Open => "PICK THE NEXT MAP. NO VOTES = RANDOM",
             Phase.Revealing => "ROLLING...",
             _ when VoteSession.Winner != null => $"NEXT MAP  <color=#{Ui.HexOf(Ui.Amber)}>{MapInfo.DisplayName(VoteSession.Winner)}</color>",
@@ -302,7 +308,7 @@ internal sealed class VoteUi : MonoBehaviour
 
         string? mine = VoteSession.MyVote;
         bool open = phase == Phase.Open;
-        string? winner = VoteSession.Winner;
+        string? winner = RevealedWinner;
         for (int i = 0; i < _rows.Count; i++)
         {
             var row = _rows[i];
@@ -491,6 +497,12 @@ internal sealed class VoteUi : MonoBehaviour
         _board.anchorMin = _board.anchorMax = _board.pivot = boardAnchor;
         var chipAnchor = _context == VoteContext.LobbyMenu ? new Vector2(1f, 1f) : new Vector2(1f, 0f);
         _chip.anchorMin = _chip.anchorMax = _chip.pivot = chipAnchor;
+
+        // The lobby has no timer, so the vote count takes the ring's place.
+        bool lobby = _context == VoteContext.LobbyMenu;
+        _timerRoot.gameObject.SetActive(!lobby);
+        _voted.rectTransform.anchoredPosition = new Vector2(lobby ? -28f : -106f, -20f);
+        _votedCaption.anchoredPosition = new Vector2(lobby ? -30f : -108f, -66f);
     }
 
     private void Build()
@@ -544,7 +556,7 @@ internal sealed class VoteUi : MonoBehaviour
         _subtitle.rectTransform.Place(new Vector2(0, 1), new Vector2(30, -74), new Vector2(400, 22));
         _subtitle.characterSpacing = 2f;
 
-        var ring = Ui.Rect("Timer", _board).Place(new Vector2(1, 1), new Vector2(-26, -26), new Vector2(66, 66));
+        var ring = _timerRoot = Ui.Rect("Timer", _board).Place(new Vector2(1, 1), new Vector2(-26, -26), new Vector2(66, 66));
         Ui.Image("Track", ring, Ui.Faint, Ui.Ring).rectTransform.Fill();
         _timerRing = Ui.Image("Fill", ring, Ui.Amber, Ui.Ring);
         _timerRing.rectTransform.Fill();
@@ -558,7 +570,7 @@ internal sealed class VoteUi : MonoBehaviour
         _voted = Ui.Label("Voted", _board, 36f, Ui.Text, TextAlignmentOptions.BottomRight);
         _voted.rectTransform.Place(new Vector2(1, 1), new Vector2(-106, -20), new Vector2(120, 44));
         var votedCaption = Ui.Label("VotedCaption", _board, 12f, Ui.Muted, TextAlignmentOptions.TopRight);
-        votedCaption.rectTransform.Place(new Vector2(1, 1), new Vector2(-108, -66), new Vector2(120, 16));
+        _votedCaption = votedCaption.rectTransform.Place(new Vector2(1, 1), new Vector2(-108, -66), new Vector2(120, 16));
         votedCaption.text = "VOTED";
         votedCaption.characterSpacing = 4f;
 

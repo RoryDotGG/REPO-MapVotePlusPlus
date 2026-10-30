@@ -123,9 +123,14 @@ internal static class VoteSession
         else if (choice == VoteLogic.RandomChoice || PoolNames.Contains(choice)) Votes[e.Sender] = choice;
         else return;
 
-        float now = Time.unscaledTime;
-        if (_deadline < 0f && Votes.Count > 0) _deadline = now + Plugin.VoteSeconds.Value;
-        if (Votes.Count >= PlayerCount && _deadline > now + AllVotedSeconds) _deadline = now + AllVotedSeconds;
+        // Only the truck runs a timer. The lobby vote stays open until the host presses Start, so players who are
+        // still joining get a say and anyone can change their pick right up to then.
+        if (Context == VoteContext.Truck)
+        {
+            float now = Time.unscaledTime;
+            if (_deadline < 0f && Votes.Count > 0) _deadline = now + Plugin.VoteSeconds.Value;
+            if (Votes.Count >= PlayerCount && _deadline > now + AllVotedSeconds) _deadline = now + AllVotedSeconds;
+        }
         Broadcast();
     }
 
@@ -202,7 +207,7 @@ internal static class VoteSession
         Revision++;
     }
 
-    /// <summary>Returns false to hold the lobby start until the reveal has played.</summary>
+    /// <summary>The host's Start rolls the lobby vote. Returns false to hold the start until the reveal has played.</summary>
     public static bool OnLobbyStart(MenuPageLobby lobby)
     {
         if (!IsHost) return true;
@@ -211,6 +216,8 @@ internal static class VoteSession
             _bypassLobbyStart = false;
             return true;
         }
+        // The game refuses to start while someone is still joining; let it, rather than rolling without them.
+        if (lobby.joiningPlayer) return true;
         switch (Phase)
         {
             case Phase.Open:
