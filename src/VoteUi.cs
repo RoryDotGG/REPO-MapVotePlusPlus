@@ -19,6 +19,10 @@ internal sealed class VoteUi : MonoBehaviour
     private const int MaxVisibleRows = 7;
     private const float ThumbWidth = 112f, ThumbHeight = RowHeight - 12f, TextLeft = 132f;
     private const float CellWidth = 250f, SpinSeconds = 3.3f, HoldSeconds = 2.8f;
+    private const float CursorSize = 52f; // matches the game's menu cursor at 1080p
+    // The game's lobby panel, measured at 16:9 in 1080p units. The board lines up with its top, sits as far from the
+    // right edge as the panel is from the left, and grows to the panel's height (capped).
+    private const float LobbyTop = 254f, LobbyBottom = 1018f, LobbyMargin = 91f, LobbyMaxScale = 1.2f;
     private static readonly List<InputKey> KeysKeptWhileVoting = new() { InputKey.PushToTalk };
 
     private sealed class RowView
@@ -263,7 +267,7 @@ internal sealed class VoteUi : MonoBehaviour
         if (!show) return;
 
         _boardGroup.alpha = _boardT;
-        _board.localScale = Vector3.one * (0.96f + 0.04f * _boardT);
+        _board.localScale = Vector3.one * (BoardScale() * (0.96f + 0.04f * _boardT));
         _board.anchoredPosition = BoardAnchor() + new Vector2(0, -(1f - _boardT) * 18f);
 
         var phase = VoteSession.Phase;
@@ -358,7 +362,9 @@ internal sealed class VoteUi : MonoBehaviour
 
     private void AnimateCursor()
     {
-        bool show = _boardOpen && _context == VoteContext.Truck && _boardT > 0.2f;
+        // The game draws its menu cursor into its own render texture, underneath this overlay, so draw a matching
+        // one on top: whenever the truck board is open, and in the lobby while the pointer is over the board.
+        bool show = _boardT > 0.2f && (_context == VoteContext.Truck ? _boardOpen : Ui.Hovered(_board));
         if (_cursor.gameObject.activeSelf != show) _cursor.gameObject.SetActive(show);
         if (!show) return;
         _cursor.SetAsLastSibling();
@@ -473,14 +479,17 @@ internal sealed class VoteUi : MonoBehaviour
         return (control?.displayName is { Length: > 0 } d ? d : key.ToString()).ToUpperInvariant();
     }
 
-    private Vector2 BoardAnchor() => _context == VoteContext.LobbyMenu ? new Vector2(-56f, 0f) : Vector2.zero;
-    private Vector2 ChipAnchor() => _context == VoteContext.LobbyMenu ? new Vector2(-56f, 0f) : new Vector2(-36f, 36f);
+    private Vector2 BoardAnchor() => _context == VoteContext.LobbyMenu ? new Vector2(-LobbyMargin, -LobbyTop) : Vector2.zero;
+    private Vector2 ChipAnchor() => _context == VoteContext.LobbyMenu ? new Vector2(-LobbyMargin, -LobbyTop) : new Vector2(-36f, 36f);
+
+    private float BoardScale() =>
+        _context == VoteContext.LobbyMenu ? Mathf.Min(LobbyMaxScale, (LobbyBottom - LobbyTop) / _board.sizeDelta.y) : 1f;
 
     private void Place()
     {
-        var boardAnchor = _context == VoteContext.LobbyMenu ? new Vector2(1f, 0.5f) : new Vector2(0.5f, 0.5f);
+        var boardAnchor = _context == VoteContext.LobbyMenu ? new Vector2(1f, 1f) : new Vector2(0.5f, 0.5f);
         _board.anchorMin = _board.anchorMax = _board.pivot = boardAnchor;
-        var chipAnchor = _context == VoteContext.LobbyMenu ? new Vector2(1f, 0.5f) : new Vector2(1f, 0f);
+        var chipAnchor = _context == VoteContext.LobbyMenu ? new Vector2(1f, 1f) : new Vector2(1f, 0f);
         _chip.anchorMin = _chip.anchorMax = _chip.pivot = chipAnchor;
     }
 
@@ -501,9 +510,11 @@ internal sealed class VoteUi : MonoBehaviour
         BuildChip();
         BuildReveal();
 
-        _cursor = Ui.Rect("Cursor", _root).Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(18, 18));
-        Ui.Image("Outline", _cursor, Ui.Ink, Ui.Dot).rectTransform.Fill();
-        Ui.Image("Dot", _cursor, Ui.Amber, Ui.Dot).rectTransform.Fill(3, 3, 3, 3);
+        _cursor = Ui.Rect("Cursor", _root).Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CursorSize, CursorSize));
+        _cursor.pivot = Ui.ArrowTip; // the tip sits on the mouse
+        var cursorShadow = Ui.Image("Shadow", _cursor, Ui.Ink.WithAlpha(0.6f), Ui.Arrow).rectTransform.Fill();
+        cursorShadow.anchoredPosition = new Vector2(2f, -3f);
+        Ui.Image("Arrow", _cursor, Ui.Pointer, Ui.Arrow).rectTransform.Fill();
         _cursor.gameObject.SetActive(false);
         _canvas.enabled = false;
     }

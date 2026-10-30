@@ -20,19 +20,26 @@ internal static class Ui
     public static readonly Color Amber = Hex("FFB31A");
     public static readonly Color Hot = Hex("FF5A1F");
     public static readonly Color Ink = Hex("141414");
+    public static readonly Color Pointer = Hex("EF8E08"); // the game's menu cursor
 
     private static readonly Color[] PlayerColors =
     {
         Hex("FFB31A"), Hex("4FD1C5"), Hex("F56565"), Hex("9F7AEA"), Hex("68D391"), Hex("63B3ED"), Hex("F687B3"), Hex("F6E05E"),
     };
 
-    private static Sprite? _rounded, _roundedSmall, _ring, _dot, _fade, _hazard;
+    private const int ArrowSize = 64;
+    private const float ArrowPad = 2f;
+    /// <summary>Where the arrow's tip sits in its sprite, for use as a pivot.</summary>
+    public static readonly Vector2 ArrowTip = new(ArrowPad / ArrowSize, 1f - ArrowPad / ArrowSize);
+
+    private static Sprite? _rounded, _roundedSmall, _ring, _dot, _fade, _hazard, _arrow;
     public static Sprite Rounded => _rounded ??= MakeRounded(64, 14);
     public static Sprite RoundedSmall => _roundedSmall ??= MakeRounded(32, 6);
     public static Sprite Ring => _ring ??= MakeCircle(128, 9);
     public static Sprite Dot => _dot ??= MakeCircle(64, 0);
     public static Sprite FadeRight => _fade ??= MakeFade(64);
     public static Sprite Hazard => _hazard ??= MakeHazard(32);
+    public static Sprite Arrow => _arrow ??= MakeArrow();
 
     private static TMP_FontAsset? _font;
     private static readonly List<TextMeshProUGUI> Texts = new();
@@ -88,6 +95,11 @@ internal static class Ui
         tmp.overflowMode = TextOverflowModes.Ellipsis;
         tmp.raycastTarget = false;
         tmp.richText = true;
+        // R.E.P.O.'s font has tall ascenders, and with Ellipsis TMP draws nothing at all once a line is taller than
+        // its rect. Grow the text area away from the aligned edge so only horizontal overflow truncates.
+        // TMP keeps the vertical part of the alignment in the high byte: Top = 0x100, Bottom = 0x400.
+        int vertical = (int)align & 0xFF00;
+        tmp.margin = new Vector4(0, vertical == 0x100 ? 0 : -size, 0, vertical == 0x400 ? 0 : -size);
         if (_font) tmp.font = _font;
         if (Texts.Count > 256) Texts.RemoveAll(t => !t);
         Texts.Add(tmp);
@@ -202,6 +214,38 @@ internal static class Ui
         var tex = new Texture2D(width, 1, TextureFormat.RGBA32, false);
         for (int x = 0; x < width; x++) tex.SetPixel(x, 0, new Color(1, 1, 1, Mathf.SmoothStep(0, 1, x / (width - 1f))));
         return Finish(tex, Vector4.zero);
+    }
+
+    /// <summary>The game's menu pointer: an arrowhead with its tip at the top-left and a notch at the back.</summary>
+    private static Sprite MakeArrow()
+    {
+        // Traced from the in-game cursor, in its own pixels (y down from the tip).
+        var outline = new[] { new Vector2(0, 0), new Vector2(50, 21), new Vector2(23, 29), new Vector2(16, 48) };
+        const int size = ArrowSize;
+        float scale = (size - 2 * ArrowPad) / 50f;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            int hits = 0;
+            for (int s = 0; s < 16; s++) // 4x4 supersampling for smooth edges
+            {
+                var p = new Vector2(x + (s % 4 + 0.5f) / 4f - ArrowPad, size - y - (s / 4 + 0.5f) / 4f - ArrowPad) / scale;
+                if (InPolygon(outline, p)) hits++;
+            }
+            tex.SetPixel(x, y, new Color(1, 1, 1, hits / 16f));
+        }
+        return Finish(tex, Vector4.zero);
+    }
+
+    private static bool InPolygon(Vector2[] poly, Vector2 p)
+    {
+        bool inside = false;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+            if (poly[i].y > p.y != poly[j].y > p.y &&
+                p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
+                inside = !inside;
+        return inside;
     }
 
     /// <summary>Diagonal warning stripes, tiled. White/clear so the Image colour tints it.</summary>
