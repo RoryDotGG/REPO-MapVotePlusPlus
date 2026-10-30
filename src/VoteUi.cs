@@ -217,7 +217,7 @@ internal sealed class VoteUi : MonoBehaviour
             if (mouse.rightButton.wasPressedThisFrame && VoteSession.MyVote != null)
             {
                 VoteSession.ClearMyVote();
-                Ui.Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Deny, null, -1f, -1f, soundOnly: true));
+                Ui.Click(MenuManager.MenuClickEffectType.Deny);
             }
             float wheel = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(wheel) > 0.01f) _scrollTarget -= Mathf.Sign(wheel) * (RowHeight + RowGap);
@@ -238,12 +238,12 @@ internal sealed class VoteUi : MonoBehaviour
     {
         if (VoteSession.Phase != Phase.Open)
         {
-            Ui.Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Dud, null, -1f, -1f, soundOnly: true));
+            Ui.Click(MenuManager.MenuClickEffectType.Dud);
             return;
         }
         VoteSession.Cast(row.Choice);
         row.Pulse = 1f;
-        Ui.Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Confirm, null, -1f, -1f, soundOnly: true));
+        Ui.Click(MenuManager.MenuClickEffectType.Confirm);
     }
 
     private void SetBoardOpen(bool open)
@@ -442,7 +442,7 @@ internal sealed class VoteUi : MonoBehaviour
             _landed = true;
             _punch = 1f;
             _revealTitle.color = Ui.Amber;
-            Ui.Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Confirm, null, 0.9f, -1f, soundOnly: true));
+            Ui.Click(MenuManager.MenuClickEffectType.Confirm, 0.9f);
         }
 
         for (int i = 0; i < _cells.Count; i++)

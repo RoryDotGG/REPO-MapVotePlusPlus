@@ -59,7 +59,9 @@ internal sealed class MapInfo
     {
         try
         {
-            var localized = level.NarrativeNameLocalized ? level.NarrativeNameLocalized.GetLocalizedString() : null;
+            var localized = level.NarrativeNameLocalized
+                ? Compat.Call(level.NarrativeNameLocalized, nameof(LocalizedAsset.GetLocalizedString)) as string
+                : null;
             if (!string.IsNullOrWhiteSpace(localized)) return localized!.Trim().ToUpperInvariant();
         }
         catch (Exception e)

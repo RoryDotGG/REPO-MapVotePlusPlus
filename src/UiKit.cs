@@ -146,8 +146,11 @@ internal static class Ui
         }
     }
 
-    public static void Tick(float pitch = 1f) =>
-        Sound(m => m.MenuEffectClick(MenuManager.MenuClickEffectType.Tick, null, pitch, 0.6f, soundOnly: true));
+    /// <summary>The game's menu click sound. Bound by name: its signature changes between game updates.</summary>
+    public static void Click(MenuManager.MenuClickEffectType type, float pitch = -1f, float volume = -1f) =>
+        Sound(m => Compat.Call(m, nameof(MenuManager.MenuEffectClick), type, null, pitch, volume, true));
+
+    public static void Tick(float pitch = 1f) => Click(MenuManager.MenuClickEffectType.Tick, pitch, 0.6f);
 
     // ---- procedural sprites -------------------------------------------------------------
 
