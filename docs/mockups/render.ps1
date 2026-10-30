@@ -1,4 +1,4 @@
-# Renders the mock-ups and banner from the HTML in this folder with headless Brave (any Chromium works: -Browser).
+# Renders the mock-ups, banner and icon from the HTML in this folder with headless Brave (any Chromium works: -Browser).
 # Uses a throwaway browser profile, so your own isn't touched. Usage: ./render.ps1 [-Only mock-lobby]
 param(
     [string]$Browser = "$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe",
@@ -8,7 +8,8 @@ param(
 $jobs = @(
     @{ Page = 'mock-lobby.html'; Out = '..\mock-lobby.png'; Size = '1280,720' },
     @{ Page = 'mock-truck.html'; Out = '..\mock-truck.png'; Size = '1280,720' },
-    @{ Page = 'banner.html'; Out = '..\banner.png'; Size = '1280,640' }
+    @{ Page = 'banner.html'; Out = '..\banner.png'; Size = '1280,640' },
+    @{ Page = 'icon.html'; Out = '..\..\icon.png'; Size = '256,256' }
 )
 $profileDir = Join-Path ([IO.Path]::GetTempPath()) 'mapvote-mockups'
 

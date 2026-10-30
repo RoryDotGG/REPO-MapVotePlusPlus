@@ -3,7 +3,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@700&family=Teko:wght@400;500;600&display=block");
 
 html, body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: #000; }
-/* Headless Chromium has a minimum window width, so lay out against the body rather than the viewport (narrow pages). */
+/* Headless Chromium has a minimum window width, so lay out against the body rather than the viewport. */
 body { position: relative; }
 
 .stage {

@@ -100,7 +100,7 @@ Run the vote-rule self-check (no game needed):
 dotnet run --project tests/VoteLogicCheck
 ```
 
-The mock-ups and banner are HTML in [`docs/mockups`](docs/mockups). To re-render them, run this in PowerShell. It needs Brave, or pass `-Browser` with the path to any Chromium-based browser:
+The mock-ups, banner and icon are HTML in [`docs/mockups`](docs/mockups). To re-render them, run this in PowerShell. It needs Brave, or pass `-Browser` with the path to any Chromium-based browser:
 
 ```powershell
 ./docs/mockups/render.ps1
