@@ -21,11 +21,17 @@
 
 ## What it looks like
 
-The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor. The reveal and the truck's HUD box sit on top of the game:
+The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor.
+
+| Lobby | Truck (press M) |
+| --- | --- |
+| ![Lobby vote panel mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-lobby.png) | ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png) |
+
+The reveal and the truck's HUD box sit on top of the game:
 
 ![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.jpg)
 
-<sub>Mock-up drawn from the UI's layout values.</sub>
+<sub>Mock-ups drawn from the UI's layout values, not in-game captures.</sub>
 
 ## How to vote
 
@@ -92,6 +98,12 @@ Run the vote-rule self-check (no game needed):
 
 ```bash
 dotnet run --project tests/VoteLogicCheck
+```
+
+The mock-ups, banner and icon are HTML in [`docs/mockups`](docs/mockups). To re-render them, run this in PowerShell. It needs Brave, or pass `-Browser` with the path to any Chromium-based browser:
+
+```powershell
+./docs/mockups/render.ps1
 ```
 
 ## Compatibility

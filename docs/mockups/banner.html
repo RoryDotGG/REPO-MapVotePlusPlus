@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- README banner (1280x640). The vote panel on the right is the lobby panel from mock-lobby.html, scaled up. Render with docs/mockups/render.ps1. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  html, body { width: 1280px; height: 640px; }
+  body {
+    background:
+      radial-gradient(circle at 78% 52%, rgba(255, 140, 20, 0.2), transparent 38%),
+      #0d0d10;
+    font-family: "Bebas Neue", sans-serif;
+  }
+  .hazard { position: absolute; left: 0; right: 0; height: 38px; background: repeating-linear-gradient(-45deg, #ffb31a 0 22px, #0d0d10 22px 44px); }
+  h1 { position: absolute; left: 76px; top: 96px; margin: 0; font: 400 164px/1 "Bebas Neue", sans-serif; color: #ffb31a; }
+  .sub { position: absolute; left: 80px; top: 230px; font: 400 52px/1 "Bebas Neue", sans-serif; color: #f3eee4; letter-spacing: 0.5px; }
+  ul { position: absolute; left: 80px; top: 318px; margin: 0; padding: 0; list-style: none; }
+  li { position: relative; padding-left: 28px; height: 53px; font: 400 37px/36px "Bebas Neue", sans-serif; color: #8e887e; letter-spacing: 0.5px; }
+  li::before { content: ""; position: absolute; left: 0; top: 10px; width: 14px; height: 14px; background: #ffb31a; }
+  .stack { position: absolute; left: 80px; top: 524px; font: 400 27px/1 "Bebas Neue", sans-serif; color: #5e5a54; letter-spacing: 1px; }
+  .panel { position: absolute; left: 770px; top: 158px; width: 310px; height: 216px; transform: scale(1.5); transform-origin: 0 0; font-family: Teko, sans-serif; }
+  .panel .vote { left: 0; top: 0; width: 310px; height: 216px; background: rgba(0, 0, 0, 0.55); }
+</style>
+</head>
+<body>
+<div class="hazard" style="top:0"></div>
+<div class="hazard" style="bottom:0"></div>
+
+<h1>MAP VOTE++</h1>
+<div class="sub">PICK THE NEXT LEVEL IN R.E.P.O.</div>
+<ul>
+  <li>NO VOTES&nbsp; = &nbsp;RANDOM</li>
+  <li>SOME VOTES&nbsp; = &nbsp;DRAWN FROM WHAT YOU PICKED</li>
+  <li>WORKS WITH CUSTOM MAPS</li>
+</ul>
+<div class="stack">BEPINEX&nbsp; / &nbsp;REPOLIB&nbsp; / &nbsp;MENULIB</div>
+
+<div class="panel">
+  <div class="vote">
+    <div class="vote-title">MAP VOTE</div>
+    <div class="vote-status">3/4 VOTED&nbsp;&nbsp;&nbsp;ROLLS WHEN THE HOST STARTS</div>
+    <div class="vote-line"></div>
+    <div class="rows" style="top:62px">
+      <div class="row"><i style="background:#ffb31a"></i><b>RANDOM</b><em><span style="color:#4fd1c5">SAM</span></em><s>1</s></div>
+      <div class="row"><i style="background:#6a4bb5"></i><b>HEADMAN MANOR</b><em></em><s></s></div>
+      <div class="row picked"><i style="background:#3f7fb0"></i><b>SWIFTBROOM ACADEMY</b><em><span style="color:#ffb31a">RORY</span> <span style="color:#f56565">JESS</span></em><s>2</s></div>
+      <div class="row hover"><i style="background:#4e9aa6"></i><b>MCJANNEK STATION</b><em></em><s></s></div>
+      <div class="row"><i style="background:#a08a3c"></i><b>MUSEUM OF HUMAN ART</b><em></em><s></s></div>
+      <div class="row"><i style="background:#2f8f62"></i><b>THE SUNKEN MALL</b><em></em><s></s></div>
+    </div>
+  </div>
+  <svg class="cursor" style="left:114px;top:149px" viewBox="0 0 50 48"><polygon points="0,0 50,21 23,29 16,48"/></svg>
+</div>
+</body>
+</html>

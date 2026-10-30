@@ -1,0 +1,59 @@
+<!doctype html>
+<!--
+  Mock-up of the truck vote menu: the MenuLib popup page NativeBoard.ToggleTruckPage opens on M, in the game's
+  720x405 menu space (scaled to 1280x720). The HUD box is hidden while a menu is open. Not an in-game capture.
+  Render with docs/mockups/render.ps1.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .stage { background: linear-gradient(#1d1a16 0%, #14120f 55%, #0b0a08 100%); }
+  .windscreen {
+    position: absolute; left: 90px; top: 18px; width: 540px; height: 150px;
+    clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+    background: linear-gradient(#2f3a44, #1b2229 70%, #151a1f);
+  }
+  .dash { position: absolute; left: 0; right: 0; top: 168px; height: 70px; background: linear-gradient(#24201b, #171410); }
+  .screen {
+    position: absolute; left: 270px; top: 60px; width: 180px; height: 92px; border: 4px solid #0b0a09; border-radius: 3px;
+    background: linear-gradient(#6b6656 0%, #4a463b 55%, #2a2722 100%); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  }
+  .hud { position: absolute; left: 14px; font: 500 18px/1 Teko, sans-serif; letter-spacing: 0.5px; }
+  .dimmer { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); }
+
+  /* MenuLib's popup page (the game's settings-page template), right-hand preset */
+  .page { position: absolute; left: 380px; top: 70px; width: 290px; height: 252px; background: rgba(10, 10, 12, 0.9); border: 1px solid rgba(255, 255, 255, 0.07); }
+  .page-header { position: absolute; left: 12px; top: 6px; font: 400 32px/40px Teko, sans-serif; color: #f3eee4; }
+  .page-status { position: absolute; left: 12px; top: 52px; font: 400 12px/20px Teko, sans-serif; letter-spacing: 0.3px; color: #8e887e; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="windscreen"></div>
+  <div class="screen"></div>
+  <div class="dash"></div>
+  <div class="hud" style="top:356px;color:#f2c14e">$12K / $20K</div>
+  <div class="hud" style="top:376px;color:#8bd07a">100 HP</div>
+  <div class="dimmer"></div>
+
+  <!-- NativeBoard.ToggleTruckPage: status line, then one 24-unit row per option in the page's scroll box -->
+  <div class="page">
+    <div class="page-header">MAP VOTE</div>
+    <div class="page-status">3/4 VOTED&nbsp;&nbsp;&nbsp;CLOSES IN 13S</div>
+    <div class="rows" style="--w:266px;left:12px;top:76px">
+      <div class="row"><i style="background:#ffb31a"></i><b>RANDOM</b><em><span style="color:#4fd1c5">SAM</span></em><s>1</s></div>
+      <div class="row hover"><i style="background:#6a4bb5"></i><b>HEADMAN MANOR</b><em></em><s></s></div>
+      <div class="row picked"><i style="background:#3f7fb0"></i><b>SWIFTBROOM ACADEMY</b><em><span style="color:#ffb31a">RORY</span> <span style="color:#f56565">JESS</span></em><s>2</s></div>
+      <div class="row"><i style="background:#4e9aa6"></i><b>MCJANNEK STATION</b><em></em><s></s></div>
+      <div class="row"><i style="background:#a08a3c"></i><b>MUSEUM OF HUMAN ART</b><em></em><s></s></div>
+      <div class="row"><i style="background:#2f8f62"></i><b>THE SUNKEN MALL</b><em></em><s></s></div>
+    </div>
+  </div>
+
+  <svg class="cursor" style="left:488px;top:184px" viewBox="0 0 50 48"><polygon points="0,0 50,21 23,29 16,48"/></svg>
+</div>
+<div class="tag">Mock-up drawn from NativeBoard.cs layout values (not an in-game capture)</div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<!--
+  Mock-up of the lobby vote panel, drawn from NativeBoard.cs layout values in the game's 720x405 menu space
+  (scaled to 1280x720). Not an in-game capture. Render with docs/mockups/render.ps1.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  .stage {
+    background:
+      radial-gradient(ellipse 60% 40% at 72% 58%, rgba(120, 150, 140, 0.18), transparent 70%),
+      linear-gradient(#262b33 0%, #1b2026 45%, #10151a 62%, #0b0f10 100%);
+  }
+  .trees {
+    position: absolute; left: 0; right: 0; top: 150px; height: 120px; background: #0a0e0f;
+    clip-path: polygon(0 40%, 4% 22%, 7% 38%, 11% 12%, 15% 34%, 19% 18%, 23% 36%, 27% 8%, 31% 30%, 36% 16%, 40% 34%,
+      45% 10%, 49% 30%, 54% 14%, 58% 36%, 63% 6%, 67% 28%, 72% 16%, 76% 34%, 81% 12%, 85% 30%, 90% 18%, 94% 38%,
+      100% 20%, 100% 100%, 0 100%);
+  }
+  .ground { position: absolute; left: 0; right: 0; top: 262px; bottom: 0; background: linear-gradient(#0e1312, #080a0a); }
+
+  .title {
+    position: absolute; left: 101px; top: 6px; font: italic 700 70px/1 Oswald, sans-serif; letter-spacing: 7px;
+    color: #ff9a0e; text-shadow: 0 0 14px rgba(255, 140, 0, 0.55), 0 3px 0 #7a3c00;
+  }
+  .chat { position: absolute; left: 155px; top: 76px; font: 500 15px/1 Teko, sans-serif; letter-spacing: 1.5px; color: #b8781f; }
+  .chat u { text-underline-offset: 2px; }
+
+  .lobby { position: absolute; left: 34px; top: 95px; width: 324px; height: 287px; background: rgba(8, 12, 11, 0.74); }
+  .playerbar { position: absolute; left: 4px; top: 9px; width: 313px; height: 28px; background: rgba(0, 0, 0, 0.82); }
+  .ping { position: absolute; left: 6px; top: 4px; font: 400 21px/1 Teko, sans-serif; color: #3fd24a; }
+  .player { position: absolute; right: 38px; top: 3px; font: 400 23px/1 Teko, sans-serif; color: #8c9298; }
+  .head { position: absolute; right: 6px; top: 6px; width: 26px; height: 17px; border-radius: 9px 9px 2px 2px; background: #e33fc6; }
+  .head::before, .head::after { content: ""; position: absolute; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #1a0716; }
+  .head::before { left: 4px; } .head::after { right: 4px; }
+  .button { position: absolute; font: 400 27px/1 Teko, sans-serif; color: #c4c9ce; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="trees"></div>
+  <div class="ground"></div>
+
+  <div class="title">LOBBY</div>
+  <div class="chat">PRESS <u>T</u> TO CHAT</div>
+
+  <div class="lobby">
+    <div class="playerbar"><span class="ping">27 MS</span><span class="player">SAM</span><span class="head"></span></div>
+  </div>
+  <div class="button" style="left:47px;top:310px">CUSTOMIZE</div>
+  <div class="button" style="left:160px;top:313px">MODS</div>
+  <div class="button" style="left:259px;top:313px">INVITE</div>
+  <div class="button" style="left:62px;top:337px">LEAVE</div>
+  <div class="button" style="left:148px;top:339px">SETTINGS</div>
+  <div class="button" style="left:238px;top:341px">START GAME</div>
+
+  <!-- NativeBoard.BuildLobby: LobbyLeft 380, LobbyTop 310 (from the bottom), width 310, header 62, pitch 24 -->
+  <div class="vote" style="left:380px;top:95px;width:310px;height:216px">
+    <div class="vote-title">MAP VOTE</div>
+    <div class="vote-status">2/4 VOTED&nbsp;&nbsp;&nbsp;ROLLS WHEN THE HOST STARTS</div>
+    <div class="vote-line"></div>
+    <div class="rows" style="top:62px">
+      <div class="row"><i style="background:#ffb31a"></i><b>RANDOM</b><em><span style="color:#4fd1c5">SAM</span></em><s>1</s></div>
+      <div class="row"><i style="background:#6a4bb5"></i><b>HEADMAN MANOR</b><em></em><s></s></div>
+      <div class="row picked"><i style="background:#3f7fb0"></i><b>SWIFTBROOM ACADEMY</b><em><span style="color:#ffb31a">RORY</span> <span style="color:#f56565">JESS</span></em><s>2</s></div>
+      <div class="row hover"><i style="background:#4e9aa6"></i><b>MCJANNEK STATION</b><em></em><s></s></div>
+      <div class="row"><i style="background:#a08a3c"></i><b>MUSEUM OF HUMAN ART</b><em></em><s></s></div>
+      <div class="row"><i style="background:#2f8f62"></i><b>THE SUNKEN MALL</b><em></em><s></s></div>
+    </div>
+  </div>
+
+  <svg class="cursor" style="left:494px;top:244px" viewBox="0 0 50 48"><polygon points="0,0 50,21 23,29 16,48"/></svg>
+</div>
+<div class="tag">Mock-up drawn from NativeBoard.cs layout values (not an in-game capture)</div>
+</body>
+</html>
