@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/RoryDotGG/REPO-MapVote/main/docs/banner.png" alt="MapVote: pick the next level in R.E.P.O." width="100%">
+  <img src="https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/banner.png" alt="MapVote++: pick the next level in R.E.P.O." width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/RoryDotGG/REPO-MapVote/blob/main/LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-FFB31A?style=flat-square&labelColor=141414"></a>
+  <a href="https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-FFB31A?style=flat-square&labelColor=141414"></a>
   <img alt="BepInEx 5" src="https://img.shields.io/badge/BepInEx-5-FFB31A?style=flat-square&labelColor=141414">
   <img alt="REPOLib 4.3" src="https://img.shields.io/badge/REPOLib-4.3-FFB31A?style=flat-square&labelColor=141414">
   <img alt="No MenuLib" src="https://img.shields.io/badge/MenuLib-not%20needed-FF5A1F?style=flat-square&labelColor=141414">
 </p>
 
-**MapVote** lets your crew vote on the next level, in the truck between levels or in the pre-game lobby. It reads the map list from the game at runtime, so new official maps and custom maps show up without any config.
+**MapVote++** lets your crew vote on the next level, in the truck between levels or in the pre-game lobby. It reads the map list from the game at runtime, so new official maps and custom maps show up without any config.
 
 ## The rules
 
@@ -23,7 +23,7 @@
 
 | Vote board (truck) | Reveal and HUD box |
 | --- | --- |
-| ![Vote board mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVote/main/docs/mock-board.jpg) | ![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVote/main/docs/mock-reveal.jpg) |
+| ![Vote board mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-board.jpg) | ![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.jpg) |
 
 <sub>Mock-ups drawn from the UI's layout values. In game the mod uses R.E.P.O.'s own font and each map's loading-screen art as its thumbnail.</sub>
 
@@ -42,15 +42,15 @@
 
 ## Install
 
-**Thunderstore mod manager (r2modman, Gale):** download the zip from [Releases](https://github.com/RoryDotGG/REPO-MapVote/releases), then use **Settings > Import local mod**. Install **REPOLib** from the Online tab if you don't already have it.
+**Thunderstore mod manager (r2modman, Gale):** download the zip from [Releases](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/releases), then use **Settings > Import local mod**. Install **REPOLib** from the Online tab if you don't already have it.
 
-**Manual:** put `MapVote.dll` in `BepInEx/plugins/MapVote/`.
+**Manual:** put `MapVotePlusPlus.dll` in `BepInEx/plugins/MapVotePlusPlus/`.
 
 Everyone in the lobby needs the mod. The host runs the vote.
 
 ## Config
 
-`BepInEx/config/RoryDotGG.MapVote.cfg`
+`BepInEx/config/RoryDotGG.MapVotePlusPlus.cfg`
 
 | Key | Default | Notes |
 | --- | --- | --- |

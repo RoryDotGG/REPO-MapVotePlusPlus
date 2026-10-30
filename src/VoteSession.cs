@@ -62,9 +62,9 @@ internal static class VoteSession
 
     public static void RegisterEvents()
     {
-        _cast = new NetworkedEvent("MapVote.Cast", OnCast);
-        _state = new NetworkedEvent("MapVote.State", OnState);
-        _syncRequest = new NetworkedEvent("MapVote.SyncRequest", _ => { if (IsHost) Broadcast(); });
+        _cast = new NetworkedEvent("MapVotePlusPlus.Cast", OnCast);
+        _state = new NetworkedEvent("MapVotePlusPlus.State", OnState);
+        _syncRequest = new NetworkedEvent("MapVotePlusPlus.SyncRequest", _ => { if (IsHost) Broadcast(); });
     }
 
     /// <summary>Driven every frame by the UI object.</summary>

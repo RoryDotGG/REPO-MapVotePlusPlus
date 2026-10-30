@@ -1,7 +1,7 @@
 {
-  "name": "MapVote",
+  "name": "MapVotePlusPlus",
   "version_number": "1.0.0",
-  "website_url": "https://github.com/RoryDotGG/REPO-MapVote",
+  "website_url": "https://github.com/RoryDotGG/REPO-MapVotePlusPlus",
   "description": "Vote for the next map in the truck or the lobby. Works with custom maps. No votes = random, partial votes = drawn only from what people picked.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305",
