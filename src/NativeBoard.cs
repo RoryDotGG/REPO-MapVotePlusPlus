@@ -4,6 +4,7 @@ using MenuLib;
 using MenuLib.MonoBehaviors;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MapVote;
 
@@ -131,32 +132,59 @@ internal sealed class NativeBoard : MonoBehaviour
     private static List<(string Choice, Level? Level)> Options() =>
         new[] { (VoteLogic.RandomChoice, (Level?)null) }.Concat(VoteSession.Pool.Select(l => (l.name, (Level?)l))).ToList();
 
-    /// <summary>A map's colour tab, its name as a game menu button, and who voted for it.</summary>
+    /// <summary>A map's colour tab and thumbnail, its name as a game menu button, and who voted for it.</summary>
     private RectTransform BuildRow(Transform parent, string choice, Level? level, float width, float pitch)
     {
         var rect = Ui.Rect(choice, parent);
         rect.pivot = Vector2.zero;
         rect.sizeDelta = new Vector2(width, pitch);
 
-        var tab = Ui.Image("Tab", rect, level ? MapInfo.Get(level!).Color : Ui.Amber).rectTransform;
+        var info = level ? MapInfo.Get(level!) : null;
+        var tab = Ui.Image("Tab", rect, info?.Color ?? Ui.Amber).rectTransform;
         tab.pivot = Vector2.zero;
         tab.localPosition = new Vector2(0f, pitch * 0.2f);
         tab.sizeDelta = new Vector2(3f, pitch * 0.6f);
 
-        float size = Mathf.Min(MaxNameSize, pitch * 0.75f);
+        float thumbHeight = pitch - 4f, thumbWidth = thumbHeight * 1.8f;
+        Thumbnail(rect, info, new Vector2(6f, 2f), new Vector2(thumbWidth, thumbHeight));
+
+        float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.62f;
         var button = MenuAPI.CreateREPOButton(choice, () => Vote(choice), rect);
         var name = button.labelTMP;
         name.fontSize = size;
-        name.text = Fit(name, MapInfo.DisplayName(choice), width * 0.55f);
+        name.text = Fit(name, MapInfo.DisplayName(choice), votersX - nameX - 4f);
         // Game buttons size to their text from the bottom-left, so centre the text's height in the row.
-        button.rectTransform.localPosition = new Vector2(8f, Mathf.Max(0f, (pitch - name.GetPreferredValues("Ag").y) / 2f));
+        button.rectTransform.localPosition = new Vector2(nameX, Mathf.Max(0f, (pitch - name.GetPreferredValues("Ag").y) / 2f));
         _normal = button.menuButton.colorNormal;
 
-        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(width * 0.55f, 0f), new Vector2(width * 0.45f - 34f, pitch),
+        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(width - votersX - 34f, pitch),
             TextAlignmentOptions.MidlineRight);
         var count = Label("Count", rect, size, Ui.Text, new Vector2(width - 28f, 0f), new Vector2(28f, pitch), TextAlignmentOptions.MidlineRight);
         _rows.Add(new Row { Choice = choice, Button = button, Voters = voters, Count = count });
         return rect;
+    }
+
+    /// <summary>The level's loading-screen art; its initial on its colour when it has none; a "?" for Random.</summary>
+    private void Thumbnail(RectTransform row, MapInfo? info, Vector2 position, Vector2 size)
+    {
+        var rect = Ui.Rect("Thumb", row);
+        rect.pivot = Vector2.zero;
+        rect.localPosition = position;
+        rect.sizeDelta = size;
+        var image = rect.gameObject.AddComponent<RawImage>();
+        image.raycastTarget = false;
+        if (info?.Art)
+        {
+            image.texture = info!.Art;
+            image.uvRect = MapInfo.Crop(info.ArtUv, info.Art!, size.x / size.y);
+            return;
+        }
+
+        image.color = info != null ? Color.Lerp(Ui.Ink, info.Color, 0.55f) : Ui.Amber.WithAlpha(0.22f);
+        var mark = Ui.Label("Mark", rect, size.y * 0.8f, info != null ? Ui.Ink.WithAlpha(0.75f) : Ui.Amber,
+            TextAlignmentOptions.Center, FontStyles.Normal, _font);
+        mark.rectTransform.Fill();
+        mark.text = info == null ? "?" : info.Name.Length > 0 ? info.Name.Substring(0, 1) : "?";
     }
 
     private static void Vote(string choice)

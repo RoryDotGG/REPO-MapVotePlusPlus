@@ -68,7 +68,7 @@ Everyone in the lobby needs the mod. The host runs the vote.
 
 - **Host-authoritative.** Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately.
 - **Map loading.** The host patches `RunManager.SetRunLevel` to load the winner. The game's own level sync then tells every client which map it is.
-- **Map list.** Maps come from `REPOLib.Modules.Levels.AllLevels`. Names and accent colours (fog colour) are read from each `Level` asset.
+- **Map list.** Maps come from `REPOLib.Modules.Levels.AllLevels`. Names, thumbnails (loading-screen art) and accent colours (fog colour) are read from each `Level` asset, so custom maps get them too.
 - **UI.** The vote list is made of the game's own menu buttons via MenuLib. It's docked on the lobby page, and opens as a popup page in the truck, where the game frees the cursor and holds the player while it's open. The reveal reel and HUD box are drawn in code on an overlay canvas, with procedural sprites and no asset bundle.
 
 | File | Purpose |
