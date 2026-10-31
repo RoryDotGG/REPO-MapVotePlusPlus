@@ -1,0 +1,59 @@
+# Push a version tag (v1.2.3) to build the package, publish it to Thunderstore and make a GitHub release.
+# Needs the THUNDERSTORE_TOKEN secret: a service account token for the RoryDotGG team.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Check the tag and changelog
+        id: version
+        run: |
+          version=$(jq -r .version_number manifest.json)
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in manifest.json"
+            exit 1
+          fi
+          awk -v v="$version" '/^## /{p = $2 == v; next} p' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
+            echo "::error::CHANGELOG.md has no entry for $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check the vote rules
+        run: dotnet run --project tests/VoteLogicCheck
+
+      - name: Build the package
+        run: dotnet build -c Release -t:ThunderstorePackage
+
+      - name: Publish to Thunderstore
+        env:
+          THUNDERSTORE_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash .github/scripts/publish-thunderstore.sh "dist/MapVotePlusPlus-$VERSION.zip"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "GitHub release $GITHUB_REF_NAME already exists, skipping."
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" "dist/MapVotePlusPlus-$VERSION.zip" \
+            --title "MapVote++ $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --verify-tag

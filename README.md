@@ -104,7 +104,14 @@ To build the Thunderstore package (`dist/MapVotePlusPlus-<version>.zip`, ready t
 dotnet build -c Release -t:ThunderstorePackage
 ```
 
-When releasing, bump the version in `MapVotePlusPlus.csproj`, `manifest.json` and `src/Plugin.cs`, and add a `CHANGELOG.md` entry. The package build stops if the three versions don't match.
+To release, bump the version in `MapVotePlusPlus.csproj`, `manifest.json` and `src/Plugin.cs`, add a `CHANGELOG.md` entry, and merge it to `main`. The package build stops if the three versions don't match. Then tag that commit and push the tag:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The [release workflow](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/.github/workflows/release.yml) checks the tag matches the version, runs the vote-rule check, builds the package, publishes it to Thunderstore and attaches the zip to a GitHub release. It needs a `THUNDERSTORE_TOKEN` repository secret holding a Thunderstore service account token for the team.
 
 Run the vote-rule self-check (no game needed):
 
