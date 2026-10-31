@@ -20,17 +20,21 @@
 
 ## What it looks like
 
-The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor.
+The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor. In the lobby it sits to the right of the player list.
 
-| Lobby | Truck (press M) |
+| Before anyone votes | After a vote |
 | --- | --- |
-| ![Lobby vote panel mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-lobby.png) | ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png) |
+| ![The lobby vote panel with no votes yet](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel.jpg) | ![The lobby vote panel with one vote for Headman Manor](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel-voted.jpg) |
 
-The reveal and the truck's HUD box sit on top of the game:
+When the host presses **Start Game**, the reel at the top of the screen lands on the next map for everyone. Here the two votes were split between Swiftbroom Academy and Sunstone Valley Resort, and the draw landed on Sunstone:
 
-![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.jpg)
+![The reveal reel landing on Sunstone Valley Resort in the lobby](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-reveal.jpg)
 
-<sub>Mock-ups drawn from the UI's layout values, not in-game captures.</sub>
+In the truck, **M** opens the same list as a popup:
+
+![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png)
+
+<sub>The truck shot is a mock-up drawn from the UI's layout values. The lobby shots are in-game captures.</sub>
 
 ## How to vote
 
