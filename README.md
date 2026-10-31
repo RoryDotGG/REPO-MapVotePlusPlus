@@ -20,17 +20,21 @@
 
 ## What it looks like
 
-The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor.
+The vote list is part of the game's own menu, built with MenuLib, so it uses R.E.P.O.'s font, buttons and cursor. In the lobby it sits to the right of the player list.
 
-| Lobby | Truck (press M) |
+| Before anyone votes | After a vote |
 | --- | --- |
-| ![Lobby vote panel mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-lobby.png) | ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png) |
+| ![The lobby vote panel with no votes yet](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel.jpg) | ![The lobby vote panel with one vote for Headman Manor](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel-voted.jpg) |
 
-The reveal dims the game and spins in the middle of the screen:
+When the host presses **Start Game**, or someone sends the truck off, the game dims and a reel in the middle of the screen lands on the next map for everyone:
 
-![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.png)
+![Reveal mock-up: the reel landing on Swiftbroom Academy over the dimmed truck](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.png)
 
-<sub>Mock-ups drawn from the UI's layout values, not in-game captures.</sub>
+In the truck, **M** opens the same list as a popup:
+
+![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png)
+
+<sub>The reveal and truck shots are mock-ups drawn from the UI's layout values. The lobby shots are in-game captures.</sub>
 
 ## How to vote
 
