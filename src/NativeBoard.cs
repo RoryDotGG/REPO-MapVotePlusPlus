@@ -83,7 +83,7 @@ internal sealed class NativeBoard : MonoBehaviour
         foreach (var (choice, level) in options)
         {
             y -= pitch;
-            board.BuildRow(root, choice, level, inner, pitch).localPosition = new Vector2(Pad, y);
+            board.BuildRow(root, choice, level, new Vector2(Pad, y), inner, pitch);
         }
         board.Refresh();
     }
@@ -110,8 +110,9 @@ internal sealed class NativeBoard : MonoBehaviour
             board._status = board.Label("Status", scroller, 12f, Ui.Muted, Vector2.zero, new Vector2(width, 20f));
             return board._status.rectTransform;
         }, bottomPadding: 4f);
+        // The scroll view stacks the rows (it sets y); x = 0 is its left edge.
         foreach (var (choice, level) in Options())
-            page.AddElementToScrollView(scroller => board.BuildRow(scroller, choice, level, width, MaxPitch));
+            page.AddElementToScrollView(scroller => board.BuildRow(scroller, choice, level, Vector2.zero, width, MaxPitch));
 
         page.OpenPage(openOnTop: false);
         board.Refresh();
@@ -133,10 +134,12 @@ internal sealed class NativeBoard : MonoBehaviour
         new[] { (VoteLogic.RandomChoice, (Level?)null) }.Concat(VoteSession.Pool.Select(l => (l.name, (Level?)l))).ToList();
 
     /// <summary>A map's colour tab and thumbnail, its name as a game menu button, and who voted for it.</summary>
-    private RectTransform BuildRow(Transform parent, string choice, Level? level, float width, float pitch)
+    private RectTransform BuildRow(Transform parent, string choice, Level? level, Vector2 position, float width, float pitch)
     {
         var rect = Ui.Rect(choice, parent);
         rect.pivot = Vector2.zero;
+        // Always place it: a new rect keeps its centre anchors, so left alone the row would start halfway across its parent.
+        rect.localPosition = position;
         rect.sizeDelta = new Vector2(width, pitch);
 
         var info = level ? MapInfo.Get(level!) : null;

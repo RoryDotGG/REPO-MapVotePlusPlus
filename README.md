@@ -26,9 +26,9 @@ The vote list is part of the game's own menu, built with MenuLib, so it uses R.E
 | --- | --- |
 | ![Lobby vote panel mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-lobby.png) | ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png) |
 
-The reveal and the truck's HUD box sit on top of the game:
+The reveal dims the game and spins in the middle of the screen:
 
-![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.jpg)
+![Reveal mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.png)
 
 <sub>Mock-ups drawn from the UI's layout values, not in-game captures.</sub>
 
@@ -41,8 +41,8 @@ The reveal and the truck's HUD box sit on top of the game:
 
 - Click your pick again to clear your vote.
 - In the lobby there's no timer. Anyone can vote or change their vote until the host presses **Start Game**, including players who join late. The reveal then plays, and the game starts once it lands.
-- In the truck, the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If the truck leaves before the timer ends, the vote resolves instantly with the same rules.
-- The reveal is a slot-machine reel at the top of the screen. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
+- In the truck, the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If someone sends the truck off first, the reveal plays straight away, landing on a random map if nobody voted, and the truck leaves once it lands.
+- The reveal is a slot-machine reel in the middle of the screen, with the game dimmed behind it. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
 
 ## Install
 

@@ -15,7 +15,8 @@ namespace MapVote;
 /// </summary>
 internal sealed class VoteUi : MonoBehaviour
 {
-    private const float CellWidth = 250f, SpinSeconds = 3.3f, HoldSeconds = 2.8f;
+    private const float CellWidth = 340f, SpinSeconds = 3.3f, HoldSeconds = 2.8f;
+    private const float WindowWidth = 1080f, WindowHeight = 150f;
 
     public static VoteUi? Instance { get; private set; }
 
@@ -28,7 +29,7 @@ internal sealed class VoteUi : MonoBehaviour
     private TextMeshProUGUI _chipKey = null!, _chipTitle = null!, _chipSub = null!;
     private float _chipT;
 
-    private RectTransform _reveal = null!, _window = null!, _reel = null!;
+    private RectTransform _reveal = null!, _revealBody = null!, _window = null!, _reel = null!;
     private CanvasGroup _revealGroup = null!;
     private Image _revealCenter = null!;
     private TextMeshProUGUI _revealTitle = null!;
@@ -68,7 +69,8 @@ internal sealed class VoteUi : MonoBehaviour
         if (VoteSession.Revision != _seenRevision) OnStateChanged();
         HandleInput();
 
-        bool visible = _context != VoteContext.None && Ui.FontReady && !GameMenuBlocking();
+        // A reveal that is still up when the level changes under it (the truck driving off) fades out rather than vanishing.
+        bool visible = (_context != VoteContext.None || _revealGroup.alpha > 0.01f) && Ui.FontReady && !GameMenuBlocking();
         _canvas.enabled = visible;
         if (!visible) return;
 
@@ -185,12 +187,12 @@ internal sealed class VoteUi : MonoBehaviour
         {
             string name = i == _reelWinner ? winner : PickWeighted(weighted, odds, prev);
             prev = name;
-            var cell = Ui.Label("Cell", _reel, 30f, Ui.Text, TextAlignmentOptions.Center);
-            cell.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 24f, 60f));
+            var cell = Ui.Label("Cell", _reel, 48f, Ui.Text, TextAlignmentOptions.Center);
+            cell.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 24f, 88f));
             cell.text = MapInfo.DisplayName(name);
             cell.enableAutoSizing = true;
-            cell.fontSizeMin = 18f;
-            cell.fontSizeMax = 30f;
+            cell.fontSizeMin = 24f;
+            cell.fontSizeMax = 48f;
             _cells.Add(cell);
         }
         _revealTitle.text = "NEXT MAP";
@@ -216,23 +218,28 @@ internal sealed class VoteUi : MonoBehaviour
     {
         float elapsed = Time.unscaledTime - _reelStart;
         bool show = _reelFor != null && elapsed < SpinSeconds + HoldSeconds;
-        _revealGroup.alpha = Ui.Damp(_revealGroup.alpha, show ? 1f : 0f, show ? 14f : 6f);
+        // Quicker out once the level has changed under it, so it is gone before the loading screen.
+        float speed = show ? 14f : _context == VoteContext.None ? 12f : 6f;
+        _revealGroup.alpha = Ui.Damp(_revealGroup.alpha, show ? 1f : 0f, speed);
         bool active = _revealGroup.alpha > 0.01f;
         if (_reveal.gameObject.activeSelf != active) _reveal.gameObject.SetActive(active);
         if (!active || _cells.Count == 0) return;
+        // Grows into place as it fades in.
+        _revealBody.localScale = Vector3.one * (0.9f + 0.1f * _revealGroup.alpha);
 
         float p = Mathf.Clamp01(elapsed / SpinSeconds);
         float eased = 1f - Mathf.Pow(1f - p, 4f);
         float offset = eased * _reelWinner * CellWidth;
 
+        // Only a reel that is still showing ticks and lands: one cut short just fades.
         int centre = Mathf.RoundToInt(offset / CellWidth);
-        if (centre != _lastTickCell && !_landed)
+        if (show && centre != _lastTickCell && !_landed)
         {
             _lastTickCell = centre;
             Ui.Tick(0.85f + 0.35f * p);
         }
 
-        if (p >= 1f && !_landed)
+        if (show && p >= 1f && !_landed)
         {
             _landed = true;
             _punch = 1f;
@@ -314,20 +321,24 @@ internal sealed class VoteUi : MonoBehaviour
 
     private void BuildReveal()
     {
-        _reveal = Ui.Rect("Reveal", _root).Place(new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(780, 160));
+        // Full screen, so the dim behind the reel fades in and out with it.
+        _reveal = Ui.Rect("Reveal", _root).Fill();
         _revealGroup = _reveal.gameObject.AddComponent<CanvasGroup>();
         _revealGroup.alpha = 0f;
+        Ui.Image("Dim", _reveal, Color.black.WithAlpha(0.72f)).rectTransform.Fill();
 
-        _revealTitle = Ui.Label("Title", _reveal, 18f, Ui.Muted, TextAlignmentOptions.Center);
-        _revealTitle.rectTransform.Place(new Vector2(0.5f, 1), Vector2.zero, new Vector2(780, 24));
-        _revealTitle.characterSpacing = 10f;
+        // The reel window sits dead centre with its title above it.
+        _revealBody = Ui.Rect("Body", _reveal).Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(WindowWidth, WindowHeight));
+        _revealTitle = Ui.Label("Title", _revealBody, 30f, Ui.Muted, TextAlignmentOptions.Center);
+        _revealTitle.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, 68), new Vector2(WindowWidth, 36));
+        _revealTitle.characterSpacing = 12f;
 
-        _window = Ui.Rect("Window", _reveal).Place(new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(780, 104));
-        Shadow(_window, 20f);
+        _window = Ui.Rect("Window", _revealBody).Fill();
+        Shadow(_window, 24f);
         Ui.Image("Frame", _window, Ui.Amber.WithAlpha(0.9f), Ui.Rounded).rectTransform.Fill(-2, -2, -2, -2);
         Ui.Image("Bg", _window, Ui.Panel, Ui.Rounded).rectTransform.Fill();
         _revealCenter = Ui.Image("Centre", _window, Ui.Amber.WithAlpha(0.07f), Ui.RoundedSmall);
-        _revealCenter.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 10f, 84f));
+        _revealCenter.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 10f, WindowHeight - 22f));
 
         var mask = Ui.Rect("Mask", _window).Fill(8, 8, 8, 8);
         mask.gameObject.AddComponent<RectMask2D>();
@@ -335,19 +346,19 @@ internal sealed class VoteUi : MonoBehaviour
 
         // Edge fades so names slide in and out instead of being cut.
         var leftFade = Ui.Image("FadeL", _window, Ui.Panel, Ui.FadeRight).rectTransform;
-        leftFade.Place(new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(150, 88));
+        leftFade.Place(new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(220, WindowHeight - 16f));
         leftFade.localScale = new Vector3(-1, 1, 1);
         leftFade.pivot = new Vector2(1, 0.5f);
         var rightFade = Ui.Image("FadeR", _window, Ui.Panel, Ui.FadeRight).rectTransform;
-        rightFade.Place(new Vector2(1, 0.5f), new Vector2(-8, 0), new Vector2(150, 88));
+        rightFade.Place(new Vector2(1, 0.5f), new Vector2(-8, 0), new Vector2(220, WindowHeight - 16f));
 
-        foreach (var (anchor, y) in new[] { (new Vector2(0.5f, 1), 7f), (new Vector2(0.5f, 0), -7f) })
+        foreach (var (anchor, y) in new[] { (new Vector2(0.5f, 1), 8f), (new Vector2(0.5f, 0), -8f) })
         {
             var marker = Ui.Image("Marker", _window, Ui.Amber, Ui.RoundedSmall).rectTransform;
             marker.anchorMin = marker.anchorMax = anchor;
             marker.pivot = new Vector2(0.5f, 0.5f);
             marker.anchoredPosition = new Vector2(0, y);
-            marker.sizeDelta = new Vector2(16, 16);
+            marker.sizeDelta = new Vector2(18, 18);
             marker.localRotation = Quaternion.Euler(0, 0, 45);
         }
         _reveal.gameObject.SetActive(false);

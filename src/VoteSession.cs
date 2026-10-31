@@ -28,8 +28,7 @@ internal static class VoteSession
 
     private static float _deadline = -1f;
     private static VoteContext _lastContext;
-    private static MenuPageLobby? _pendingLobbyStart;
-    private static bool _bypassLobbyStart;
+    private static System.Action? _afterReveal;
     private static readonly System.Random Rng = new();
 
     private static NetworkedEvent _cast = null!;
@@ -55,9 +54,21 @@ internal static class VoteSession
             var rm = RunManager.instance;
             if (!rm || !rm.levelCurrent) return VoteContext.None;
             if (rm.levelCurrent == rm.levelLobbyMenu && Plugin.VoteInLobbyMenu.Value) return VoteContext.LobbyMenu;
-            if (rm.levelCurrent == rm.levelLobby && Plugin.VoteInTruck.Value && SemiFunc.LevelGenDone()) return VoteContext.Truck;
+            if (rm.levelCurrent == rm.levelLobby && Plugin.VoteInTruck.Value && InTruck(rm)) return VoteContext.Truck;
             return VoteContext.None;
         }
+    }
+
+    /// <summary>
+    /// The truck scene is loaded and its loading screen has gone. levelCurrent alone isn't enough: it switches to the
+    /// truck as soon as the shop ends, while the shop is still on screen, and stays there through the loading screen.
+    /// </summary>
+    private static bool InTruck(RunManager rm)
+    {
+        var generator = LevelGenerator.Instance;
+        var director = GameDirector.instance;
+        return generator && generator.Generated && generator.Level == rm.levelLobby
+            && director && director.currentState is GameDirector.gameState.Main or GameDirector.gameState.Death;
     }
 
     public static void RegisterEvents()
@@ -188,13 +199,10 @@ internal static class VoteSession
         _deadline = -1f;
         Broadcast();
 
-        if (_pendingLobbyStart)
-        {
-            var lobby = _pendingLobbyStart!;
-            _pendingLobbyStart = null;
-            _bypassLobbyStart = true;
-            lobby.ButtonStart();
-        }
+        // Let through whatever was held for the reveal. The vote is locked now, so it isn't held again.
+        var resume = _afterReveal;
+        _afterReveal = null;
+        resume?.Invoke();
     }
 
     private static void ResetLocal()
@@ -203,7 +211,7 @@ internal static class VoteSession
         Votes.Clear();
         Winner = null;
         _deadline = -1f;
-        _pendingLobbyStart = null;
+        _afterReveal = null;
         Revision++;
     }
 
@@ -211,25 +219,34 @@ internal static class VoteSession
     public static bool OnLobbyStart(MenuPageLobby lobby)
     {
         if (!IsHost) return true;
-        if (_bypassLobbyStart)
-        {
-            _bypassLobbyStart = false;
-            return true;
-        }
         // The game refuses to start while someone is still joining; let it, rather than rolling without them.
         if (lobby.joiningPlayer) return true;
-        switch (Phase)
-        {
-            case Phase.Open:
-                _pendingLobbyStart = lobby;
-                BeginReveal();
-                return false;
-            case Phase.Revealing:
-                _pendingLobbyStart = lobby;
-                return false;
-            default:
-                return true;
-        }
+        return HoldForReveal(() => { if (lobby) lobby.ButtonStart(); });
+    }
+
+    /// <summary>Sending the truck off ends the vote, so roll it there and then: the reel spins while the screen types.</summary>
+    public static void OnTruckSent()
+    {
+        if (IsHost && Context == VoteContext.Truck && Phase == Phase.Open) BeginReveal();
+    }
+
+    /// <summary>The truck waits for the reel to land before it leaves. Returns false to hold the departure.</summary>
+    public static bool OnTruckDepart(TruckScreenText screen)
+    {
+        if (!IsHost || Context != VoteContext.Truck) return true;
+        return HoldForReveal(() => { if (screen) screen.GotoNextLevel(); });
+    }
+
+    /// <summary>
+    /// Rolls the vote if it is still open and runs <paramref name="resume"/> once the reel has landed.
+    /// Returns false while holding; true when there is nothing to wait for. Nobody voting still rolls (a random map).
+    /// </summary>
+    private static bool HoldForReveal(System.Action resume)
+    {
+        if (Phase is not (Phase.Open or Phase.Revealing)) return true;
+        _afterReveal = resume;
+        if (Phase == Phase.Open) BeginReveal();
+        return false;
     }
 
     /// <summary>
@@ -251,7 +268,7 @@ internal static class VoteSession
         Votes.Clear();
         Winner = level ? level!.name : null;
         _deadline = -1f;
-        _pendingLobbyStart = null;
+        _afterReveal = null;
         Broadcast();
         if (level) Plugin.Log.LogInfo($"Loading voted map {level!.name}");
         return level;
