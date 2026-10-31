@@ -26,15 +26,15 @@ The vote list is part of the game's own menu, built with MenuLib, so it uses R.E
 | --- | --- |
 | ![The lobby vote panel with no votes yet](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel.jpg) | ![The lobby vote panel with one vote for Headman Manor](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-panel-voted.jpg) |
 
-When the host presses **Start Game**, the reel at the top of the screen lands on the next map for everyone. Here the two votes were split between Swiftbroom Academy and Sunstone Valley Resort, and the draw landed on Sunstone:
+When the host presses **Start Game**, or someone sends the truck off, the game dims and a reel in the middle of the screen lands on the next map for everyone:
 
-![The reveal reel landing on Sunstone Valley Resort in the lobby](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/screenshots/lobby-reveal.jpg)
+![Reveal mock-up: the reel landing on Swiftbroom Academy over the dimmed truck](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.png)
 
 In the truck, **M** opens the same list as a popup:
 
 ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png)
 
-<sub>The truck shot is a mock-up drawn from the UI's layout values. The lobby shots are in-game captures.</sub>
+<sub>The reveal and truck shots are mock-ups drawn from the UI's layout values. The lobby shots are in-game captures.</sub>
 
 ## How to vote
 
@@ -45,8 +45,8 @@ In the truck, **M** opens the same list as a popup:
 
 - Click your pick again to clear your vote.
 - In the lobby there's no timer. Anyone can vote or change their vote until the host presses **Start Game**, including players who join late. The reveal then plays, and the game starts once it lands.
-- In the truck, the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If the truck leaves before the timer ends, the vote resolves instantly with the same rules.
-- The reveal is a slot-machine reel at the top of the screen. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
+- In the truck, the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If someone sends the truck off first, the reveal plays straight away, landing on a random map if nobody voted, and the truck leaves once it lands.
+- The reveal is a slot-machine reel in the middle of the screen, with the game dimmed behind it. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
 
 ## Install
 

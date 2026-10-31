@@ -67,4 +67,14 @@ internal static class Patches
     [HarmonyPatch(typeof(MenuPageLobby), nameof(MenuPageLobby.ButtonStart))]
     [HarmonyPrefix]
     private static bool LobbyStart(MenuPageLobby __instance) => VoteSession.OnLobbyStart(__instance);
+
+    /// <summary>Someone sent the truck off from its screen: roll the vote now.</summary>
+    [HarmonyPatch(typeof(TruckScreenText), nameof(TruckScreenText.ChatMessageLobby))]
+    [HarmonyPostfix]
+    private static void TruckSent() => VoteSession.OnTruckSent();
+
+    /// <summary>Host only: the truck screen's last line drives off; hold it until the reel has landed.</summary>
+    [HarmonyPatch(typeof(TruckScreenText), nameof(TruckScreenText.GotoNextLevel))]
+    [HarmonyPrefix]
+    private static bool TruckDepart(TruckScreenText __instance) => VoteSession.OnTruckDepart(__instance);
 }

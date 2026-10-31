@@ -8,6 +8,7 @@ param(
 $jobs = @(
     @{ Page = 'mock-lobby.html'; Out = '..\mock-lobby.png'; Size = '1280,720' },
     @{ Page = 'mock-truck.html'; Out = '..\mock-truck.png'; Size = '1280,720' },
+    @{ Page = 'mock-reveal.html'; Out = '..\mock-reveal.png'; Size = '1280,720' },
     @{ Page = 'banner.html'; Out = '..\banner.png'; Size = '1280,640' },
     @{ Page = 'icon.html'; Out = '..\..\icon.png'; Size = '256,256' }
 )

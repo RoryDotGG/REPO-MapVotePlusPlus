@@ -1,0 +1,99 @@
+<!doctype html>
+<!--
+  Mock-up of the reveal reel the moment it lands, over the truck. The reel is VoteUi's overlay canvas, drawn here in
+  its 1920x1080 reference units (scaled to 1280x720); values mirror BuildReveal and AnimateReveal in src/VoteUi.cs.
+  The truck's HUD box hides while the reel is up. Not an in-game capture. Render with docs/mockups/render.ps1.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* The truck, as in mock-truck.html */
+  .stage { background: linear-gradient(#1d1a16 0%, #14120f 55%, #0b0a08 100%); }
+  .windscreen {
+    position: absolute; left: 90px; top: 18px; width: 540px; height: 150px;
+    clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+    background: linear-gradient(#2f3a44, #1b2229 70%, #151a1f);
+  }
+  .dash { position: absolute; left: 0; right: 0; top: 168px; height: 70px; background: linear-gradient(#24201b, #171410); }
+  .screen {
+    position: absolute; left: 270px; top: 60px; width: 180px; height: 92px; border: 4px solid #0b0a09; border-radius: 3px;
+    background: linear-gradient(#6b6656 0%, #4a463b 55%, #2a2722 100%); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  }
+  .hud { position: absolute; left: 14px; font: 500 18px/1 Teko, sans-serif; letter-spacing: 0.5px; }
+
+  /* VoteUi's canvas: 1920x1080 reference, scaled to the page */
+  .overlay {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform: scale(0.666667); transform-origin: 0 0; font-family: Teko, sans-serif;
+  }
+  .dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
+  /* Body: WindowWidth 1080 x WindowHeight 150, dead centre */
+  .body { position: absolute; left: 420px; top: 465px; width: 1080px; height: 150px; }
+  .title {
+    position: absolute; left: 0; right: 0; top: -68px; height: 36px; text-align: center;
+    font: 600 30px/36px Teko, sans-serif; letter-spacing: 0.12em; color: #ffb31a;
+  }
+  .window { position: absolute; inset: 0; border-radius: 14px; background: rgba(13, 13, 16, 0.95); }
+  .window::before { /* Shadow(_window, 24) */
+    content: ""; position: absolute; left: -24px; right: -24px; top: -14.4px; bottom: -33.6px; z-index: -1;
+    border-radius: 14px; background: rgba(0, 0, 0, 0.5); filter: blur(10px);
+  }
+  .frame { position: absolute; inset: -2px; border: 2px solid rgba(255, 179, 26, 0.9); border-radius: 16px; }
+  /* Centre highlight: CellWidth - 10 by WindowHeight - 22, amber at 0.16 once landed */
+  .centre { position: absolute; left: 375px; top: 11px; width: 330px; height: 128px; border-radius: 6px; background: rgba(255, 179, 26, 0.16); }
+  .mask { position: absolute; inset: 8px; overflow: hidden; }
+  /* Cells: CellWidth 340 apart, 316x88, auto-sized 24-48 to fit. Landed: neighbours scale 0.88 and fade to half. */
+  .cell {
+    position: absolute; top: 23px; width: 316px; height: 88px; margin-left: -158px;
+    display: flex; align-items: center; justify-content: center;
+    font: 600 48px/1 Teko, sans-serif; color: #f3eee4; white-space: nowrap;
+  }
+  .fade { position: absolute; top: 8px; bottom: 8px; width: 220px; }
+  .fade.l { left: 8px; background: linear-gradient(to right, #0d0d10, rgba(13, 13, 16, 0)); }
+  .fade.r { right: 8px; background: linear-gradient(to left, #0d0d10, rgba(13, 13, 16, 0)); }
+  .marker { position: absolute; left: 531px; width: 18px; height: 18px; border-radius: 3px; background: #ffb31a; transform: rotate(45deg); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="windscreen"></div>
+  <div class="screen"></div>
+  <div class="dash"></div>
+  <div class="hud" style="top:356px;color:#f2c14e">$12K / $20K</div>
+  <div class="hud" style="top:376px;color:#8bd07a">100 HP</div>
+</div>
+
+<div class="overlay">
+  <div class="dim"></div>
+  <div class="body">
+    <div class="title">NEXT MAP</div>
+    <div class="window">
+      <div class="frame"></div>
+      <div class="centre"></div>
+      <div class="mask">
+        <!-- x relative to the mask centre (532): -340, 0, +340 -->
+        <div class="cell" style="left:192px;transform:scale(0.88);opacity:0.5">HEADMAN MANOR</div>
+        <div class="cell" style="left:532px;color:#ffb31a">SWIFTBROOM ACADEMY</div>
+        <div class="cell" style="left:872px;transform:scale(0.88);opacity:0.5">MUSEUM OF HUMAN ART</div>
+      </div>
+      <div class="fade l"></div>
+      <div class="fade r"></div>
+      <div class="marker" style="top:-17px"></div>
+      <div class="marker" style="bottom:-17px"></div>
+    </div>
+  </div>
+</div>
+<div class="tag">Mock-up drawn from VoteUi.cs layout values (not an in-game capture)</div>
+<script>
+  // TMP auto-size: shrink each name until it fits its 316-unit cell (24 minimum).
+  document.fonts.ready.then(() => {
+    for (const cell of document.querySelectorAll('.cell')) {
+      let size = 48;
+      while (cell.scrollWidth > cell.clientWidth && size > 24) cell.style.fontSize = `${--size}px`;
+    }
+  });
+</script>
+</body>
+</html>
