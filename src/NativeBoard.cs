@@ -23,6 +23,7 @@ internal sealed class NativeBoard : MonoBehaviour
     private sealed class Row
     {
         public string Choice = "";
+        public RectTransform Rect = null!;
         public REPOButton Button = null!;
         public TextMeshProUGUI Voters = null!, Count = null!;
     }
@@ -32,8 +33,12 @@ internal sealed class NativeBoard : MonoBehaviour
 
     private MenuPage? _page;
     private bool _lobby;
+    private RectTransform? _lobbyBody, _lobbyPanel;
+    private REPOPopupPage? _popup;
+    private float _rowWidth;
     private TMP_FontAsset? _font;
-    private TextMeshProUGUI _status = null!;
+    private TextMeshProUGUI _status = null!, _hint = null!;
+    private REPOScrollViewElement? _hintElement;
     private readonly List<Row> _rows = new();
     private Color _normal = Color.gray;
     private int _seenRevision = -1;
@@ -53,39 +58,48 @@ internal sealed class NativeBoard : MonoBehaviour
 
     // ---- lobby ---------------------------------------------------------------------------
 
-    /// <summary>MenuLib calls this every time the lobby page is built.</summary>
+    /// <summary>
+    /// MenuLib calls this every time the lobby page is built. The panel is built even with the lobby vote switched off
+    /// and shown to match the setting, so switching it in game (REPOConfig) applies without rebuilding the page.
+    /// </summary>
     public static void BuildLobby(Transform page)
     {
-        if (!Plugin.VoteInLobbyMenu.Value) return;
-
-        var options = Options();
-        float pitch = Mathf.Min(MaxPitch, (LobbyTop - LobbyBottom - LobbyHeader - Pad) / options.Count);
+        // The board lives on the root, which stays active so it can show and hide the body. The body spans all the
+        // room the panel may use and never resizes: its children keep a new rect's centre anchors, so a resize would
+        // shift the header. The backdrop is sized to however many maps are up for the vote.
         var root = Ui.Rect("MapVotePlusPlus", page);
         root.pivot = new Vector2(0f, 1f);
         root.localPosition = new Vector2(LobbyLeft, LobbyTop);
-        root.sizeDelta = new Vector2(LobbyWidth, LobbyHeader + options.Count * pitch + Pad);
-        Ui.Image("Panel", root, Color.black.WithAlpha(0.62f)).rectTransform.Fill();
+        root.sizeDelta = new Vector2(LobbyWidth, LobbyTop - LobbyBottom);
+        var body = Ui.Rect("Body", root);
+        body.pivot = new Vector2(0f, 1f);
+        body.localPosition = Vector2.zero;
+        body.sizeDelta = root.sizeDelta;
+        var panel = Ui.Image("Panel", body, Color.black.WithAlpha(0.62f)).rectTransform;
+        panel.pivot = new Vector2(0f, 1f);
+        panel.localPosition = Vector2.zero;
 
         var board = root.gameObject.AddComponent<NativeBoard>();
         board._page = page.GetComponent<MenuPage>();
         board._lobby = true;
+        board._lobbyBody = body;
+        board._lobbyPanel = panel;
+        board._rowWidth = LobbyWidth - 2 * Pad;
         board._font = MenuFont(page);
 
-        float inner = LobbyWidth - 2 * Pad;
-        board.Label("Title", root, 24f, Ui.Amber, new Vector2(Pad, -Pad - 28f), new Vector2(inner, 28f)).text = "MAP VOTE";
-        board._status = board.Label("Status", root, 11f, Ui.Muted, new Vector2(Pad, -Pad - 46f), new Vector2(inner, 16f));
-        var line = Ui.Image("Line", root, Ui.Amber.WithAlpha(0.8f)).rectTransform;
+        float inner = board._rowWidth;
+        board.Label("Title", body, 24f, Ui.Amber, new Vector2(Pad, -Pad - 28f), new Vector2(inner, 28f)).text = "MAP VOTE";
+        board._hint = board.Label("Hint", body, 11f, Ui.Muted, new Vector2(Pad, -Pad - 25f), new Vector2(inner, 16f),
+            TextAlignmentOptions.MidlineRight);
+        board._status = board.Label("Status", body, 11f, Ui.Muted, new Vector2(Pad, -Pad - 46f), new Vector2(inner, 16f));
+        var line = Ui.Image("Line", body, Ui.Amber.WithAlpha(0.8f)).rectTransform;
         line.pivot = Vector2.zero;
         line.localPosition = new Vector2(Pad, -LobbyHeader + 3f);
         line.sizeDelta = new Vector2(inner, 1.5f);
 
-        float y = -LobbyHeader;
-        foreach (var (choice, level) in options)
-        {
-            y -= pitch;
-            board.BuildRow(root, choice, level, new Vector2(Pad, y), inner, pitch);
-        }
+        // Build the rows first: game buttons set themselves up in Awake, which doesn't run under an inactive parent.
         board.Refresh();
+        body.gameObject.SetActive(Plugin.VoteInLobbyMenu.Value);
     }
 
     // ---- truck ---------------------------------------------------------------------------
@@ -102,17 +116,23 @@ internal sealed class NativeBoard : MonoBehaviour
         var page = MenuAPI.CreateREPOPopupPage("MAP VOTE", REPOPopupPage.PresetSide.Right, shouldCachePage: false, pageDimmerVisibility: true);
         var board = page.gameObject.AddComponent<NativeBoard>();
         board._page = page.menuPage;
+        board._popup = page;
+        board._rowWidth = page.maskRectTransform.sizeDelta.x - Pad;
         board._font = MenuFont(page.transform);
 
-        float width = page.maskRectTransform.sizeDelta.x - Pad;
+        // The page's header belongs to MenuLib, so the hint gets its own line under it, shown only for a shortlist.
         page.AddElementToScrollView(scroller =>
         {
-            board._status = board.Label("Status", scroller, 12f, Ui.Muted, Vector2.zero, new Vector2(width, 20f));
+            board._hint = board.Label("Hint", scroller, 12f, Ui.Muted, Vector2.zero, new Vector2(board._rowWidth, 18f));
+            return board._hint.rectTransform;
+        });
+        board._hintElement = board._hint.GetComponent<REPOScrollViewElement>();
+        page.AddElementToScrollView(scroller =>
+        {
+            board._status = board.Label("Status", scroller, 12f, Ui.Muted, Vector2.zero, new Vector2(board._rowWidth, 20f));
             return board._status.rectTransform;
         }, bottomPadding: 4f);
-        // The scroll view stacks the rows (it sets y); x = 0 is its left edge.
-        foreach (var (choice, level) in Options())
-            page.AddElementToScrollView(scroller => board.BuildRow(scroller, choice, level, Vector2.zero, width, MaxPitch));
+        board.SyncRows();
 
         page.OpenPage(openOnTop: false);
         board.Refresh();
@@ -130,8 +150,52 @@ internal sealed class NativeBoard : MonoBehaviour
 
     // ---- rows ----------------------------------------------------------------------------
 
-    private static List<(string Choice, Level? Level)> Options() =>
-        new[] { (VoteLogic.RandomChoice, (Level?)null) }.Concat(VoteSession.Pool.Select(l => (l.name, (Level?)l))).ToList();
+    /// <summary>Random, then the maps up for this vote in pool order. A map this player doesn't have is left out.</summary>
+    private static List<(string Choice, Level? Level)> Options()
+    {
+        var pool = VoteSession.Pool;
+        var maps = VoteSession.Candidates.Select(name => pool.FirstOrDefault(l => l.name == name)).Where(l => l);
+        return new[] { (VoteLogic.RandomChoice, (Level?)null) }.Concat(maps.Select(l => (l.name, (Level?)l))).ToList();
+    }
+
+    /// <summary>
+    /// Builds a row per option, and builds them again when the host draws a different set of maps: a player can open
+    /// the list before the host's vote reaches them, and each vote can draw new maps.
+    /// </summary>
+    private void SyncRows()
+    {
+        var options = Options();
+        if (options.Select(o => o.Choice).SequenceEqual(_rows.Select(r => r.Choice))) return;
+
+        foreach (var row in _rows)
+        {
+            // Out from under the page now: Destroy waits for the end of the frame, and the scroll view lays out and
+            // the menu tracks every element that is still there until then.
+            row.Rect.gameObject.SetActive(false);
+            row.Rect.SetParent(null, false);
+            Destroy(row.Rect.gameObject);
+        }
+        _rows.Clear();
+
+        if (_lobby)
+        {
+            float pitch = Mathf.Min(MaxPitch, (LobbyTop - LobbyBottom - LobbyHeader - Pad) / options.Count);
+            _lobbyPanel!.sizeDelta = new Vector2(LobbyWidth, LobbyHeader + options.Count * pitch + Pad);
+            float y = -LobbyHeader;
+            foreach (var (choice, level) in options)
+            {
+                y -= pitch;
+                BuildRow(_lobbyBody!, choice, level, new Vector2(Pad, y), _rowWidth, pitch);
+            }
+        }
+        else
+        {
+            // The scroll view stacks the rows (it sets y); x = 0 is its left edge.
+            foreach (var (choice, level) in options)
+                _popup!.AddElementToScrollView(scroller => BuildRow(scroller, choice, level, Vector2.zero, _rowWidth, MaxPitch));
+            _popup!.scrollView.UpdateElements();
+        }
+    }
 
     /// <summary>A map's colour tab and thumbnail, its name as a game menu button, and who voted for it.</summary>
     private RectTransform BuildRow(Transform parent, string choice, Level? level, Vector2 position, float width, float pitch)
@@ -163,7 +227,7 @@ internal sealed class NativeBoard : MonoBehaviour
         var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(width - votersX - 34f, pitch),
             TextAlignmentOptions.MidlineRight);
         var count = Label("Count", rect, size, Ui.Text, new Vector2(width - 28f, 0f), new Vector2(28f, pitch), TextAlignmentOptions.MidlineRight);
-        _rows.Add(new Row { Choice = choice, Button = button, Voters = voters, Count = count });
+        _rows.Add(new Row { Choice = choice, Rect = rect, Button = button, Voters = voters, Count = count });
         return rect;
     }
 
@@ -212,6 +276,13 @@ internal sealed class NativeBoard : MonoBehaviour
 
     private void Update()
     {
+        if (_lobby)
+        {
+            bool show = Plugin.VoteInLobbyMenu.Value;
+            if (_lobbyBody!.gameObject.activeSelf != show) _lobbyBody.gameObject.SetActive(show);
+            if (!show) return;
+        }
+
         // Esc closes the truck vote; don't let the game also open its escape menu on the same press.
         if (!_lobby && GameDirector.instance) GameDirector.instance.disableEscMenuTimer = 0.2f;
         Refresh();
@@ -219,6 +290,9 @@ internal sealed class NativeBoard : MonoBehaviour
 
     private void Refresh()
     {
+        bool changed = VoteSession.Revision != _seenRevision;
+        if (changed) SyncRows();
+
         var phase = VoteSession.Phase;
         bool open = phase == Phase.Open;
         string? winner = VoteUi.Instance ? VoteUi.Instance!.RevealedWinner : VoteSession.Winner;
@@ -232,8 +306,16 @@ internal sealed class NativeBoard : MonoBehaviour
             row.Button.menuButton.colorNormal = picked ? Ui.Amber : !open && winner != null ? _normal.WithAlpha(0.45f) : _normal;
         }
 
-        if (VoteSession.Revision == _seenRevision) return;
+        if (!changed) return;
         _seenRevision = VoteSession.Revision;
+
+        // Without this, a short list looks like maps have gone missing, and Random looks like it covers every map.
+        string hint = VoteSession.Shortlisted
+            ? $"{VoteSession.Candidates.Count} OF {VoteSession.PoolNames.Count} MAPS, DRAWN AT RANDOM"
+            : "";
+        _hint.text = hint;
+        if (_hintElement) _hintElement!.visibility = hint.Length > 0;
+
         foreach (var row in _rows)
         {
             var voters = VoteSession.Votes.Where(v => v.Value == row.Choice).Select(v => v.Key).OrderBy(a => a).ToList();
