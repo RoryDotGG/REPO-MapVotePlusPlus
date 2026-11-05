@@ -28,6 +28,7 @@ internal static class VoteSession
 
     private static float _deadline = -1f;
     private static VoteContext _lastContext;
+    private static bool _lastIsHost;
     private static System.Action? _afterReveal;
     private static readonly System.Random Rng = new();
 
@@ -91,18 +92,22 @@ internal static class VoteSession
         }
 
         var context = Context;
-        if (context != _lastContext)
+        bool isHost = IsHost;
+        // Joining, the lobby level is set before the room is joined, and until then the game counts as singleplayer, so
+        // the player looks like the host. A context change alone would never ask the real host for the vote.
+        if (context != _lastContext || isHost != _lastIsHost)
         {
             _lastContext = context;
+            _lastIsHost = isHost;
             if (context != VoteContext.None)
             {
-                if (!IsHost) _syncRequest.RaiseEvent(null!, NetworkingEvents.RaiseMasterClient, SendOptions.SendReliable);
+                if (!isHost) _syncRequest.RaiseEvent(null!, NetworkingEvents.RaiseMasterClient, SendOptions.SendReliable);
                 else if (Phase == Phase.Closed) Open();
                 else Broadcast();
             }
         }
 
-        if (!IsHost || context == VoteContext.None || _deadline < 0f || Time.unscaledTime < _deadline) return;
+        if (!isHost || context == VoteContext.None || _deadline < 0f || Time.unscaledTime < _deadline) return;
         if (Phase == Phase.Open) BeginReveal();
         else if (Phase == Phase.Revealing) Lock();
     }
