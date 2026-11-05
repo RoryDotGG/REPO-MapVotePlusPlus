@@ -15,8 +15,9 @@
 
 - If nobody votes, you get a random map that isn't the one you just played, as in vanilla.
 - If anyone votes, the winner is drawn only from the maps people picked. Each vote is one ticket, so 3 votes for A and 1 for B gives A a 75% chance and B 25%.
-- A vote for Random is a ticket that can land on any map.
+- A vote for Random is a ticket that can land on any map on the list.
 - The list shows who has voted for each map as the votes come in.
+- The host can limit how many maps each vote offers with `MapsPerVote`. Each time a vote opens, that many maps are drawn at random, never including the one you just played. Random, and the pick when nobody votes, only land on one of those maps. The vote list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**.
 
 ## What it looks like
 
@@ -66,6 +67,15 @@ Everyone in the lobby needs the mod. The host runs the vote.
 | `Voting.VoteSeconds` | `25` | 5 to 120. The host's value is used. |
 | `Voting.VoteInLobbyMenu` | `true` | |
 | `Voting.VoteInTruck` | `true` | |
+| `Voting.MapsPerVote` | `All` | `All`, or 2 to 20. How many maps each vote offers, drawn at random every vote and never the map you just played. The host's value is used. |
+
+### Changing settings in game
+
+With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) installed, press **Mods** in the main menu, the lobby or the escape menu, pick **Map Vote++**, change a setting and press **Save Changes**. Changes apply straight away:
+
+- **Maps Per Vote** draws the open vote's list again. Votes for Random, or for a map that's still on the list, are kept.
+- If the host switches off **Vote In Lobby Menu** or **Vote In Truck** where a vote is open, it closes and the next map is random. Switching it back on opens a new vote.
+- **Toggle Key** works at once. **Vote Seconds** applies from the next countdown.
 
 ## How it works
 

@@ -21,6 +21,25 @@ public static class VoteLogic
         return eligible.Count > 0 ? eligible : pool.ToList();
     }
 
+    /// <summary>
+    /// The maps put to a vote. A limit of 0, or one that covers the whole pool, offers every map. A smaller limit draws
+    /// that many at random from the maps other than the previous one, kept in pool order so the list reads the same way.
+    /// </summary>
+    public static List<string> Shortlist(IReadOnlyList<string> pool, string? previous, int limit, Random rng)
+    {
+        if (limit <= 0 || limit >= pool.Count) return pool.ToList();
+
+        var eligible = RandomPool(pool, previous);
+        int take = Math.Min(limit, eligible.Count);
+        for (int i = 0; i < take; i++)
+        {
+            int j = rng.Next(i, eligible.Count);
+            (eligible[i], eligible[j]) = (eligible[j], eligible[i]);
+        }
+        var picked = new HashSet<string>(eligible.Take(take));
+        return pool.Where(picked.Contains).ToList();
+    }
+
     /// <summary>Ballots that still point at something valid (a map that exists or Random).</summary>
     public static List<string> ValidBallots(IReadOnlyList<string> pool, IEnumerable<string> ballots) =>
         ballots.Where(b => b == RandomChoice || pool.Contains(b)).ToList();

@@ -99,7 +99,7 @@ internal sealed class VoteUi : MonoBehaviour
     {
         _seenRevision = VoteSession.Revision;
         if (VoteSession.Phase == Phase.Revealing && VoteSession.Winner != null && _reelFor != VoteSession.Winner)
-            StartReel(VoteSession.Winner, VoteLogic.Odds(VoteSession.PoolNames, VoteSession.Votes.Values, VoteSession.PreviousLevel));
+            StartReel(VoteSession.Winner, VoteLogic.Odds(VoteSession.Candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel));
     }
 
     private void HandleInput()
@@ -176,8 +176,9 @@ internal sealed class VoteUi : MonoBehaviour
         if (_context == VoteContext.Truck) NativeBoard.CloseTruckPage();
 
         // Fill the reel with names in proportion to their odds so it "feels" like the vote.
-        var weighted = VoteSession.PoolNames.Where(n => odds.TryGetValue(n, out var o) && o > 0f).ToList();
-        if (weighted.Count == 0) weighted = VoteSession.PoolNames;
+        var candidates = VoteSession.Candidates;
+        var weighted = candidates.Where(n => odds.TryGetValue(n, out var o) && o > 0f).ToList();
+        if (weighted.Count == 0) weighted = candidates;
         const int cellCount = 34;
         _reelWinner = cellCount - 4;
         foreach (var c in _cells) Destroy(c.gameObject);

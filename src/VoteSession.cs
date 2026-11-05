@@ -27,6 +27,7 @@ internal static class VoteSession
     public static int Revision { get; private set; }
 
     private static float _deadline = -1f;
+    private static List<string> _candidates = new();
     private static VoteContext _lastContext;
     private static bool _lastIsHost;
     private static System.Action? _afterReveal;
@@ -45,6 +46,12 @@ internal static class VoteSession
     /// <summary>Every run level the game knows about, including ones added by other mods.</summary>
     public static List<Level> Pool => Levels.AllLevels.Where(l => l).ToList();
     public static List<string> PoolNames => Pool.Select(l => l.name).ToList();
+    /// <summary>
+    /// The maps up for this vote: a random few when the host limits MapsPerVote, otherwise all of them. Votes, Random
+    /// and the no-vote draw all stay within it. It is the whole pool until the host's first vote reaches us, and it
+    /// keeps the last vote's maps until the next vote opens, so the list doesn't change under the reveal.
+    /// </summary>
+    public static List<string> Candidates => _candidates.Count > 0 ? _candidates : PoolNames;
     public static string? PreviousLevel => RunManager.instance && RunManager.instance.previousRunLevel
         ? RunManager.instance.previousRunLevel.name : null;
 
@@ -136,7 +143,7 @@ internal static class VoteSession
         if (!IsHost || Phase != Phase.Open) return;
         var choice = e.CustomData as string ?? "";
         if (choice == "") Votes.Remove(e.Sender);
-        else if (choice == VoteLogic.RandomChoice || PoolNames.Contains(choice)) Votes[e.Sender] = choice;
+        else if (choice == VoteLogic.RandomChoice || Candidates.Contains(choice)) Votes[e.Sender] = choice;
         else return;
 
         // Only the truck runs a timer. The lobby vote stays open until the host presses Start, so players who are
@@ -152,7 +159,7 @@ internal static class VoteSession
 
     private static void OnState(EventData e)
     {
-        if (IsHost || e.CustomData is not object[] { Length: 5 } data) return;
+        if (IsHost || e.CustomData is not object[] { Length: >= 5 } data) return;
         Phase = (Phase)(int)data[0];
         float left = (float)data[1];
         _deadline = left < 0f ? -1f : Time.unscaledTime + left;
@@ -161,6 +168,7 @@ internal static class VoteSession
         var choices = (string[])data[3];
         for (int i = 0; i < actors.Length && i < choices.Length; i++) Votes[actors[i]] = choices[i];
         Winner = (string)data[4] is { Length: > 0 } w ? w : null;
+        _candidates = data.Length > 5 && data[5] is string[] candidates ? candidates.ToList() : new List<string>();
         Revision++;
     }
 
@@ -175,7 +183,7 @@ internal static class VoteSession
         Revision++;
         var payload = new object[]
         {
-            (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "",
+            (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "", _candidates.ToArray(),
         };
         _state.RaiseEvent(payload, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
     }
@@ -186,12 +194,49 @@ internal static class VoteSession
         Votes.Clear();
         Winner = null;
         _deadline = -1f;
+        Draw();
         Broadcast();
     }
 
+    private static void Draw()
+    {
+        _candidates = VoteLogic.Shortlist(PoolNames, PreviousLevel, Plugin.MapLimit, Rng);
+        if (Shortlisted) Plugin.Log.LogInfo($"Vote is on {_candidates.Count} map(s): {string.Join(", ", _candidates)}");
+    }
+
+    /// <summary>
+    /// The host changed MapsPerVote mid-game (REPOConfig): draw the open vote's list again so it applies now.
+    /// Votes for Random or a map that is still on the list stand; the rest are dropped.
+    /// </summary>
+    public static void Redraw()
+    {
+        if (!IsHost || Phase != Phase.Open) return;
+        Draw();
+        foreach (var actor in Votes.Where(v => v.Value != VoteLogic.RandomChoice && !_candidates.Contains(v.Value)).Select(v => v.Key).ToList())
+            Votes.Remove(actor);
+        Broadcast();
+    }
+
+    /// <summary>
+    /// The host switched off voting where the vote is open (REPOConfig): close it, so the game picks at random as it
+    /// would with the vote off. Switching it back on opens a fresh vote through <see cref="Tick"/>.
+    /// </summary>
+    public static void CloseIfSwitchedOff()
+    {
+        if (!IsHost || Phase != Phase.Open || Context != VoteContext.None) return;
+        Phase = Phase.Closed;
+        Votes.Clear();
+        Winner = null;
+        _deadline = -1f;
+        Broadcast();
+    }
+
+    /// <summary>The host drew a few maps rather than putting every one up. Players see it too: the list is synced.</summary>
+    public static bool Shortlisted => _candidates.Count > 0 && _candidates.Count < PoolNames.Count;
+
     private static void BeginReveal()
     {
-        Winner = VoteLogic.Resolve(PoolNames, Votes.Values, PreviousLevel, Rng);
+        Winner = VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng);
         Phase = Phase.Revealing;
         _deadline = Time.unscaledTime + RevealSeconds;
         Plugin.Log.LogInfo($"Vote closed with {Votes.Count} ballot(s); next map: {Winner}");
@@ -217,6 +262,7 @@ internal static class VoteSession
         Winner = null;
         _deadline = -1f;
         _afterReveal = null;
+        _candidates = new List<string>();
         Revision++;
     }
 
@@ -256,14 +302,15 @@ internal static class VoteSession
 
     /// <summary>
     /// Called from SetRunLevel on the host. Returns the level to load, or null to let the game pick at random
-    /// (nobody voted). An unfinished vote resolves instantly so the game never waits on us.
+    /// (nobody voted on a full list). An unfinished vote resolves instantly so the game never waits on us, and a
+    /// shortlist always resolves, so the next map is one of the maps that were offered.
     /// </summary>
     public static Level? ConsumeWinner(RunManager rm)
     {
         string? name = Phase switch
         {
             Phase.Locked or Phase.Revealing => Winner,
-            Phase.Open when Votes.Count > 0 => VoteLogic.Resolve(PoolNames, Votes.Values, PreviousLevel, Rng),
+            Phase.Open when Votes.Count > 0 || Shortlisted => VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng),
             _ => null,
         };
         if (Phase == Phase.Closed && name == null) return null;
