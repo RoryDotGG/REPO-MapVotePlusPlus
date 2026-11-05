@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- The host can limit how many maps each vote offers with the new `MapsPerVote` setting. Each vote draws that many maps at random, never the one you just played, and the list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**. Random, and the pick when nobody votes, only land on one of those maps.
+- With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) installed, settings changed in game apply straight away. Changing **Maps Per Vote** draws the open vote's list again and keeps votes for Random or for maps still on it. If the host switches off **Vote In Lobby Menu** or **Vote In Truck** while a vote is open there, the vote closes and the next map is random.
+- Players who join the lobby now pick up the vote that's already running straight away.
+
 ## 1.0.1
 
 - The truck's vote list no longer runs off the right edge of its popup.
