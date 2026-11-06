@@ -12,11 +12,14 @@ namespace MapVote;
 ///  - Chip: a small HUD pill in the truck that says what is going on and which key opens the vote.
 ///  - Reveal: a slot-machine reel that lands on the winner for everyone at the same time.
 /// Also routes the keyboard: the toggle key opens the truck vote, and 1-9 / R vote on whichever board has focus.
+/// And opens the truck vote by itself on arrival (ShowVoteOnArrival), so each player picks a map or skips first.
 /// </summary>
 internal sealed class VoteUi : MonoBehaviour
 {
     private const float CellWidth = 340f, SpinSeconds = 3.3f, HoldSeconds = 2.8f;
     private const float WindowWidth = 1080f, WindowHeight = 150f;
+    /// <summary>How long after arriving in the truck the vote opens by itself, so the player sees where they are first.</summary>
+    private const float PromptDelay = 1f;
 
     public static VoteUi? Instance { get; private set; }
 
@@ -43,6 +46,10 @@ internal sealed class VoteUi : MonoBehaviour
     private int _seenRevision = -1;
     private float _fontRetry;
 
+    // The arrival prompt: waiting to open it, it is up, or this player closed it without a pick.
+    private bool _promptPending, _prompting, _skipped;
+    private float _arrivedAt;
+
     /// <summary>The winner, but only once this client's reel has landed on it, so the vote list can't spoil the reveal.</summary>
     public string? RevealedWinner =>
         VoteSession.Phase == Phase.Revealing && (!_landed || _reelFor != VoteSession.Winner) ? null : VoteSession.Winner;
@@ -68,6 +75,7 @@ internal sealed class VoteUi : MonoBehaviour
         // Ahead of the visibility check: the reveal has to start (and close the truck vote) even while it is covered.
         if (VoteSession.Revision != _seenRevision) OnStateChanged();
         HandleInput();
+        UpdatePrompt();
 
         // A reveal that is still up when the level changes under it (the truck driving off) fades out rather than vanishing.
         bool visible = (_context != VoteContext.None || _revealGroup.alpha > 0.01f) && Ui.FontReady && !GameMenuBlocking();
@@ -93,6 +101,10 @@ internal sealed class VoteUi : MonoBehaviour
         _reelStart = -999f;
         _seenRevision = -1;
         if (_context != VoteContext.Truck) NativeBoard.CloseTruckPage();
+
+        _promptPending = _context == VoteContext.Truck && Plugin.ShowVoteOnArrival.Value;
+        _prompting = _skipped = false;
+        _arrivedAt = Time.unscaledTime;
     }
 
     private void OnStateChanged()
@@ -102,11 +114,11 @@ internal sealed class VoteUi : MonoBehaviour
             StartReel(VoteSession.Winner, VoteLogic.Odds(VoteSession.Candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel));
     }
 
+    private static bool Typing() => !SemiFunc.NoTextInputsActive() || (ChatManager.instance && ChatManager.instance.chatActive);
+
     private void HandleInput()
     {
-        if (_context == VoteContext.None) return;
-        bool typing = !SemiFunc.NoTextInputsActive() || (ChatManager.instance && ChatManager.instance.chatActive);
-        if (typing) return;
+        if (_context == VoteContext.None || Typing()) return;
 
         if (_context == VoteContext.Truck && Ui.KeyDown(Plugin.ToggleKey.Value)) NativeBoard.ToggleTruckPage();
 
@@ -117,12 +129,45 @@ internal sealed class VoteUi : MonoBehaviour
             if (Ui.KeyDown(Key.Digit1 + i) || Ui.KeyDown(Key.Numpad1 + i)) board!.QuickVote(i + 1);
     }
 
+    // ---- arrival prompt ------------------------------------------------------------------
+
+    /// <summary>
+    /// Shortly after arriving in the truck, opens the vote by itself so this player picks a map or skips before they
+    /// get going. It waits for the host's vote to reach this player, and for the screen to be free of other menus.
+    /// </summary>
+    private void UpdatePrompt()
+    {
+        if (_prompting)
+        {
+            if (NativeBoard.PromptOpen) return;
+            // Closed by a pick, by Skip, or by Esc or the toggle key: anything but a pick is a skip.
+            _prompting = false;
+            _skipped = VoteSession.MyVote == null;
+            return;
+        }
+        if (!_promptPending) return;
+
+        // Nothing to ask once the vote is rolling or over, or once this player has voted or opened it themselves.
+        var phase = VoteSession.Phase;
+        if (!Plugin.ShowVoteOnArrival.Value || phase is Phase.Revealing or Phase.Locked || VoteSession.MyVote != null
+            || NativeBoard.TruckPageOpen)
+        {
+            _promptPending = false;
+            return;
+        }
+        if (phase != Phase.Open || Time.unscaledTime - _arrivedAt < PromptDelay || Typing()) return;
+        if (!NativeBoard.OpenTruckPage(prompt: true)) return; // the escape menu has the screen; try again once it closes
+
+        _promptPending = false;
+        _prompting = true;
+    }
+
     // ---- chip ----------------------------------------------------------------------------
 
     private void AnimateChip()
     {
         var phase = VoteSession.Phase;
-        bool needsMe = phase == Phase.Open && VoteSession.MyVote == null;
+        bool needsMe = phase == Phase.Open && VoteSession.MyVote == null && !_skipped;
         // Truck only: in the lobby the vote list is always on screen.
         bool show = _context == VoteContext.Truck && (_reelStart < 0f || Time.unscaledTime - _reelStart > SpinSeconds + HoldSeconds);
         _chipT = Ui.Damp(_chipT, show ? 1f : 0f, 12f);
@@ -131,14 +176,14 @@ internal sealed class VoteUi : MonoBehaviour
         if (_chipT < 0.01f) return;
 
         _chipKey.text = KeyName();
-        float left = VoteSession.SecondsLeft;
-        string status = $"{VoteSession.Votes.Count}/{VoteSession.PlayerCount} VOTED{(left >= 0f ? $"  /  {Mathf.CeilToInt(left)}S" : "")}";
+        string status = $"{VoteSession.Votes.Count}/{VoteSession.PlayerCount} VOTED  /  ROLLS ON DEPARTURE";
         string muted = $"<color=#{Ui.HexOf(Ui.Muted)}>";
         string amber = $"<color=#{Ui.HexOf(Ui.Amber)}>";
         switch (phase)
         {
             case Phase.Open:
-                _chipTitle.text = needsMe ? "VOTE FOR THE NEXT MAP" : $"YOU PICKED {amber}{MapInfo.DisplayName(VoteSession.MyVote)}</color>";
+                _chipTitle.text = VoteSession.MyVote is { } mine ? $"YOU PICKED {amber}{MapInfo.DisplayName(mine)}</color>"
+                    : _skipped ? "YOU SKIPPED" : "VOTE FOR THE NEXT MAP";
                 _chipSub.text = $"{muted}{status}</color>";
                 break;
             case Phase.Revealing:

@@ -31,7 +31,7 @@ When the host presses **Start Game**, or someone sends the truck off, the game d
 
 ![Reveal mock-up: the reel landing on Swiftbroom Academy over the dimmed truck](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-reveal.png)
 
-In the truck, **M** opens the same list as a popup:
+In the truck, the same list pops up when you arrive, so you can pick a map or skip it. **M** opens it again:
 
 ![Truck vote menu mock-up](https://raw.githubusercontent.com/RoryDotGG/REPO-MapVotePlusPlus/main/docs/mock-truck.png)
 
@@ -41,12 +41,14 @@ In the truck, **M** opens the same list as a popup:
 
 | Where | What you see | Controls |
 | --- | --- | --- |
-| Truck | A **MAP VOTE** box bottom-right that pulses until you vote | **M** opens the vote menu. Click a map, or press `1`-`9` (`R` for Random). `M` or `Esc` closes. |
+| Truck | The vote menu opens when you arrive. After that, a **MAP VOTE** box bottom-right | Click a map, or press `1`-`9` (`R` for Random), and the menu closes. **Skip**, `M` or `Esc` closes it without voting. **M** opens it again. |
 | Lobby menu | A **MAP VOTE** panel to the right of the player list | Click a map, or press `1`-`9` (`R` for Random). |
 
 - Click your pick again to clear your vote.
-- In the lobby there's no timer. Anyone can vote or change their vote until the host presses **Start Game**, including players who join late. The reveal then plays, and the game starts once it lands.
-- In the truck, the countdown (25s by default) starts at the first vote and drops to 3s once everyone has voted. If someone sends the truck off first, the reveal plays straight away, landing on a random map if nobody voted, and the truck leaves once it lands.
+- Neither vote has a timer. Anyone can vote or change their vote until the vote rolls, including players who join the lobby late.
+- In the lobby, the vote rolls when the host presses **Start Game**. The reveal plays, and the game starts once it lands.
+- In the truck, the vote rolls when someone sends the truck off. The reveal plays, landing on a random map if nobody voted, and the truck leaves once it lands.
+- The truck's **MAP VOTE** box pulses until you vote. If you skip, it stops pulsing, and you can still vote with **M** until the truck leaves. Turn off `ShowVoteOnArrival` to open the truck vote yourself instead.
 - The reveal is a slot-machine reel in the middle of the screen, with the game dimmed behind it. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
 
 ## Install
@@ -64,9 +66,9 @@ Everyone in the lobby needs the mod. The host runs the vote.
 | Key | Default | Notes |
 | --- | --- | --- |
 | `Controls.ToggleKey` | `M` | Opens the vote in the truck. Any Unity Input System key name. |
-| `Voting.VoteSeconds` | `25` | 5 to 120. The host's value is used. |
 | `Voting.VoteInLobbyMenu` | `true` | |
 | `Voting.VoteInTruck` | `true` | |
+| `Voting.ShowVoteOnArrival` | `true` | Opens the truck vote when you arrive, so you pick a map or skip first. Each player's own setting. |
 | `Voting.MapsPerVote` | `All` | `All`, or 2 to 20. How many maps each vote offers, drawn at random every vote and never the map you just played. The host's value is used. |
 
 ### Changing settings in game
@@ -75,7 +77,7 @@ With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) instal
 
 - **Maps Per Vote** draws the open vote's list again. Votes for Random, or for a map that's still on the list, are kept.
 - If the host switches off **Vote In Lobby Menu** or **Vote In Truck** where a vote is open, it closes and the next map is random. Switching it back on opens a new vote.
-- **Toggle Key** works at once. **Vote Seconds** applies from the next countdown.
+- **Toggle Key** works at once. Switching on **Show Vote On Arrival** applies the next time you arrive in the truck.
 
 ## How it works
 

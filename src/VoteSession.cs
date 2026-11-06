@@ -18,7 +18,6 @@ internal enum VoteContext { None, LobbyMenu, Truck }
 internal static class VoteSession
 {
     public const float RevealSeconds = 4.6f;
-    private const float AllVotedSeconds = 3f;
 
     public static Phase Phase { get; private set; }
     public static string? Winner { get; private set; }
@@ -26,6 +25,7 @@ internal static class VoteSession
     /// <summary>Bumped on every state change so the UI can react without diffing.</summary>
     public static int Revision { get; private set; }
 
+    /// <summary>When the reveal ends. Neither vote has a countdown: they roll when the host starts or the truck leaves.</summary>
     private static float _deadline = -1f;
     private static List<string> _candidates = new();
     private static VoteContext _lastContext;
@@ -115,8 +115,7 @@ internal static class VoteSession
         }
 
         if (!isHost || context == VoteContext.None || _deadline < 0f || Time.unscaledTime < _deadline) return;
-        if (Phase == Phase.Open) BeginReveal();
-        else if (Phase == Phase.Revealing) Lock();
+        if (Phase == Phase.Revealing) Lock();
     }
 
     /// <summary>Vote for a map, or toggle the vote off by picking the same option again.</summary>
@@ -146,14 +145,8 @@ internal static class VoteSession
         else if (choice == VoteLogic.RandomChoice || Candidates.Contains(choice)) Votes[e.Sender] = choice;
         else return;
 
-        // Only the truck runs a timer. The lobby vote stays open until the host presses Start, so players who are
-        // still joining get a say and anyone can change their pick right up to then.
-        if (Context == VoteContext.Truck)
-        {
-            float now = Time.unscaledTime;
-            if (_deadline < 0f && Votes.Count > 0) _deadline = now + Plugin.VoteSeconds.Value;
-            if (Votes.Count >= PlayerCount && _deadline > now + AllVotedSeconds) _deadline = now + AllVotedSeconds;
-        }
+        // No timer: the vote stays open until the host presses Start or someone sends the truck off, so anyone can
+        // change their pick right up to then, and players who are still joining the lobby get a say.
         Broadcast();
     }
 

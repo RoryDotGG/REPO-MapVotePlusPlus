@@ -20,9 +20,9 @@ public class Plugin : BaseUnityPlugin
 
     internal static ManualLogSource Log = null!;
     internal static ConfigEntry<Key> ToggleKey = null!;
-    internal static ConfigEntry<int> VoteSeconds = null!;
     internal static ConfigEntry<bool> VoteInLobbyMenu = null!;
     internal static ConfigEntry<bool> VoteInTruck = null!;
+    internal static ConfigEntry<bool> ShowVoteOnArrival = null!;
     internal static ConfigEntry<string> MapsPerVote = null!;
 
     /// <summary>MapsPerVote as a number, or 0 when it offers every map.</summary>
@@ -32,11 +32,11 @@ public class Plugin : BaseUnityPlugin
     {
         Log = Logger;
         ToggleKey = Config.Bind("Controls", "ToggleKey", Key.M, "Opens and closes the map vote in the truck. In the lobby it's always on screen.");
-        VoteSeconds = Config.Bind("Voting", "VoteSeconds", 25,
-            new ConfigDescription("Truck only: how many seconds the vote stays open after the first vote. It ends early once everyone has voted. The lobby vote stays open until the host presses Start Game. The host's value is used.",
-                new AcceptableValueRange<int>(5, 120)));
         VoteInLobbyMenu = Config.Bind("Voting", "VoteInLobbyMenu", true, "Show the vote in the pre-game lobby menu.");
-        VoteInTruck = Config.Bind("Voting", "VoteInTruck", true, "Show the vote in the truck between levels.");
+        VoteInTruck = Config.Bind("Voting", "VoteInTruck", true,
+            "Show the vote in the truck between levels. It has no timer: it rolls when someone sends the truck off.");
+        ShowVoteOnArrival = Config.Bind("Voting", "ShowVoteOnArrival", true,
+            "Open the truck vote by itself when you arrive in the truck, so you pick a map or skip before you get going. Off: open it with the toggle key. Your own setting, not the host's.");
         // A list rather than a number so REPOConfig's in-game slider reads "All": it doesn't show descriptions.
         var mapChoices = new[] { "All" }.Concat(Enumerable.Range(2, 19).Select(n => n.ToString())).ToArray();
         MapsPerVote = Config.Bind("Voting", "MapsPerVote", "All",

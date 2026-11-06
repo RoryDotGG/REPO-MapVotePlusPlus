@@ -19,6 +19,8 @@ internal sealed class NativeBoard : MonoBehaviour
     // panel, level with its top, and never runs below its bottom.
     private const float LobbyLeft = 380f, LobbyTop = 310f, LobbyBottom = 23f, LobbyWidth = 310f, LobbyHeader = 62f;
     private const float Pad = 10f, MaxPitch = 24f, MaxNameSize = 18f;
+    /// <summary>Under the list, bottom-left of the right-hand popup: where REPOConfig puts its Save Changes button.</summary>
+    private static readonly Vector2 SkipPosition = new(370f, 18f);
 
     private sealed class Row
     {
@@ -30,9 +32,10 @@ internal sealed class NativeBoard : MonoBehaviour
 
     private static readonly List<NativeBoard> Live = new();
     private static REPOPopupPage? _truckPage;
+    private static bool _truckPrompt;
 
     private MenuPage? _page;
-    private bool _lobby;
+    private bool _lobby, _prompt;
     private RectTransform? _lobbyBody, _lobbyPanel;
     private REPOPopupPage? _popup;
     private float _rowWidth;
@@ -104,19 +107,31 @@ internal sealed class NativeBoard : MonoBehaviour
 
     // ---- truck ---------------------------------------------------------------------------
 
+    public static bool TruckPageOpen => IsOpen(_truckPage);
+
+    /// <summary>The truck vote opened by itself on arrival and is still up.</summary>
+    public static bool PromptOpen => _truckPrompt && TruckPageOpen;
+
     public static void ToggleTruckPage()
     {
-        if (IsOpen(_truckPage))
-        {
-            CloseTruckPage();
-            return;
-        }
-        if (!MenuManager.instance || MenuManager.instance.currentMenuPage) return; // the escape menu has the screen
+        if (TruckPageOpen) CloseTruckPage();
+        else OpenTruckPage(prompt: false);
+    }
+
+    /// <summary>
+    /// Opens the truck vote as a popup page. As the arrival <paramref name="prompt"/> it has a Skip button and closes
+    /// once this player picks a map; opened with the toggle key it stays up until they close it. Returns false when
+    /// it can't open now: it is already open, or another menu has the screen.
+    /// </summary>
+    public static bool OpenTruckPage(bool prompt)
+    {
+        if (TruckPageOpen || !MenuManager.instance || MenuManager.instance.currentMenuPage) return false; // the escape menu has the screen
 
         var page = MenuAPI.CreateREPOPopupPage("MAP VOTE", REPOPopupPage.PresetSide.Right, shouldCachePage: false, pageDimmerVisibility: true);
         var board = page.gameObject.AddComponent<NativeBoard>();
         board._page = page.menuPage;
         board._popup = page;
+        board._prompt = prompt;
         board._rowWidth = page.maskRectTransform.sizeDelta.x - Pad;
         board._font = MenuFont(page.transform);
 
@@ -133,16 +148,21 @@ internal sealed class NativeBoard : MonoBehaviour
             return board._status.rectTransform;
         }, bottomPadding: 4f);
         board.SyncRows();
+        // Closing the prompt any other way (Esc, the toggle key) counts as a skip too.
+        if (prompt) page.AddElement(parent => MenuAPI.CreateREPOButton("SKIP", CloseTruckPage, parent, SkipPosition));
 
         page.OpenPage(openOnTop: false);
         board.Refresh();
         _truckPage = page;
+        _truckPrompt = prompt;
+        return true;
     }
 
     public static void CloseTruckPage()
     {
-        if (IsOpen(_truckPage)) _truckPage!.ClosePage(closePagesAddedOnTop: true);
+        if (TruckPageOpen) _truckPage!.ClosePage(closePagesAddedOnTop: true);
         _truckPage = null;
+        _truckPrompt = false;
     }
 
     private static bool IsOpen(REPOPopupPage? page) =>
@@ -216,7 +236,7 @@ internal sealed class NativeBoard : MonoBehaviour
         Thumbnail(rect, info, new Vector2(6f, 2f), new Vector2(thumbWidth, thumbHeight));
 
         float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.62f;
-        var button = MenuAPI.CreateREPOButton(choice, () => Vote(choice), rect);
+        var button = MenuAPI.CreateREPOButton(choice, () => Pick(choice), rect);
         var name = button.labelTMP;
         name.fontSize = size;
         name.text = Fit(name, MapInfo.DisplayName(choice), votersX - nameX - 4f);
@@ -254,9 +274,12 @@ internal sealed class NativeBoard : MonoBehaviour
         mark.text = info == null ? "?" : info.Name.Length > 0 ? info.Name.Substring(0, 1) : "?";
     }
 
-    private static void Vote(string choice)
+    private void Pick(string choice)
     {
-        if (VoteSession.Phase == Phase.Open) VoteSession.Cast(choice);
+        if (VoteSession.Phase != Phase.Open) return;
+        VoteSession.Cast(choice);
+        // The arrival prompt has done its job once this player has a pick, so let them get on with the truck.
+        if (_prompt && VoteSession.MyVote != null) CloseTruckPage();
     }
 
     /// <summary>1-9 / R from the keyboard, with the click the button would have made.</summary>
@@ -268,7 +291,7 @@ internal sealed class NativeBoard : MonoBehaviour
             Ui.Click(MenuManager.MenuClickEffectType.Dud);
             return;
         }
-        VoteSession.Cast(_rows[index].Choice);
+        Pick(_rows[index].Choice);
         Ui.Click(MenuManager.MenuClickEffectType.Confirm);
     }
 
@@ -328,12 +351,10 @@ internal sealed class NativeBoard : MonoBehaviour
     private string Status(Phase phase, string? winner)
     {
         string tally = $"{VoteSession.Votes.Count}/{VoteSession.PlayerCount} VOTED";
-        float left = VoteSession.SecondsLeft;
         return phase switch
         {
-            Phase.Open when left >= 0f => $"{tally}   CLOSES IN {Mathf.CeilToInt(left)}S",
             Phase.Open when _lobby => $"{tally}   ROLLS WHEN THE HOST STARTS",
-            Phase.Open => $"{tally}   NO VOTES = RANDOM",
+            Phase.Open => $"{tally}   ROLLS ON DEPARTURE",
             _ when winner != null => $"NEXT MAP  <color=#{Ui.HexOf(Ui.Amber)}>{MapInfo.DisplayName(winner)}</color>",
             Phase.Revealing => "ROLLING...",
             _ => "WAITING FOR HOST",
