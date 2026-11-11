@@ -36,10 +36,12 @@ body { position: relative; }
 .row .thumb.random { background: rgba(255, 179, 26, 0.22); color: #ffb31a; text-align: center; font: 400 17px/23px Teko, sans-serif; }
 .row b { position: absolute; left: 48px; top: 0; font: 400 18px/25px Teko, sans-serif; color: #808080; white-space: nowrap; }
 .row em {
-  position: absolute; left: calc(var(--w) * 0.62); width: calc(var(--w) * 0.38 - 34px); top: 0; text-align: right;
+  position: absolute; left: calc(var(--w) * 0.6); width: calc(var(--w) * 0.4 - 56.3px); top: 0; text-align: right;
   font: normal 400 11.2px/25px Teko, sans-serif; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden;
 }
-.row s { position: absolute; right: 0; width: 28px; top: 0; text-align: right; text-decoration: none; font: 400 18px/25px Teko, sans-serif; color: #f3eee4; }
+.row s { position: absolute; right: 30.7px; width: 21.6px; top: 0; text-align: right; text-decoration: none; font: 400 18px/25px Teko, sans-serif; color: #f3eee4; }
+/* The map's chance of winning, blank until a vote is in and on the Random row. */
+.row u { position: absolute; right: 0; width: 27.7px; top: 0; text-align: right; text-decoration: none; font: 400 12.6px/25px Teko, sans-serif; color: #8e887e; }
 /* Stand-ins for each level's loading-screen art, which is what the game shows in the thumbnail. */
 .art-manor { background-image: url("art/manor.svg"); }
 .art-academy { background-image: url("art/academy.svg"); }

@@ -27,7 +27,7 @@ internal sealed class NativeBoard : MonoBehaviour
         public string Choice = "";
         public RectTransform Rect = null!;
         public REPOButton Button = null!;
-        public TextMeshProUGUI Voters = null!, Count = null!;
+        public TextMeshProUGUI Voters = null!, Count = null!, Odds = null!;
     }
 
     private static readonly List<NativeBoard> Live = new();
@@ -217,7 +217,7 @@ internal sealed class NativeBoard : MonoBehaviour
         }
     }
 
-    /// <summary>A map's colour tab and thumbnail, its name as a game menu button, and who voted for it.</summary>
+    /// <summary>A map's colour tab and thumbnail, its name as a game menu button, who voted for it and its chance of winning.</summary>
     private RectTransform BuildRow(Transform parent, string choice, Level? level, Vector2 position, float width, float pitch)
     {
         var rect = Ui.Rect(choice, parent);
@@ -235,7 +235,7 @@ internal sealed class NativeBoard : MonoBehaviour
         float thumbHeight = pitch - 4f, thumbWidth = thumbHeight * 1.8f;
         Thumbnail(rect, info, new Vector2(6f, 2f), new Vector2(thumbWidth, thumbHeight));
 
-        float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.62f;
+        float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.6f;
         var button = MenuAPI.CreateREPOButton(choice, () => Pick(choice), rect);
         var name = button.labelTMP;
         name.fontSize = size;
@@ -244,10 +244,15 @@ internal sealed class NativeBoard : MonoBehaviour
         button.rectTransform.localPosition = new Vector2(nameX, Mathf.Max(0f, (pitch - name.GetPreferredValues("Ag").y) / 2f));
         _normal = button.menuButton.colorNormal;
 
-        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(width - votersX - 34f, pitch),
+        // From the right: the chance of winning (room for "100%"), the vote count (two digits), then who voted.
+        float oddsSize = size * 0.7f, oddsWidth = oddsSize * 2.2f, countWidth = size * 1.2f;
+        float countX = width - oddsWidth - 3f - countWidth;
+        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(countX - 4f - votersX, pitch),
             TextAlignmentOptions.MidlineRight);
-        var count = Label("Count", rect, size, Ui.Text, new Vector2(width - 28f, 0f), new Vector2(28f, pitch), TextAlignmentOptions.MidlineRight);
-        _rows.Add(new Row { Choice = choice, Rect = rect, Button = button, Voters = voters, Count = count });
+        var count = Label("Count", rect, size, Ui.Text, new Vector2(countX, 0f), new Vector2(countWidth, pitch), TextAlignmentOptions.MidlineRight);
+        var odds = Label("Odds", rect, oddsSize, Ui.Muted, new Vector2(width - oddsWidth, 0f), new Vector2(oddsWidth, pitch),
+            TextAlignmentOptions.MidlineRight);
+        _rows.Add(new Row { Choice = choice, Rect = rect, Button = button, Voters = voters, Count = count, Odds = odds });
         return rect;
     }
 
@@ -343,13 +348,46 @@ internal sealed class NativeBoard : MonoBehaviour
         _hint.text = hint;
         if (_hintElement) _hintElement!.visibility = hint.Length > 0;
 
+        // Each vote is a lottery ticket, so the maps' chances show how far ahead the leader really is. Random's own row
+        // stays blank: its tickets are already spread across the maps' chances, and its share would push the column
+        // past 100%.
+        var odds = problem == null ? CurrentOdds() : null;
         foreach (var row in _rows)
         {
             var voters = VoteSession.Votes.Where(v => v.Value == row.Choice).Select(v => v.Key).OrderBy(a => a).ToList();
             row.Count.text = voters.Count > 0 ? voters.Count.ToString() : "";
             row.Voters.text = string.Join(" ",
                 voters.Select(a => $"<color=#{Ui.HexOf(Ui.PlayerColor(a))}>{VoteSession.PlayerName(a).ToUpperInvariant()}</color>"));
+            row.Odds.text = odds != null && row.Choice != VoteLogic.RandomChoice && odds.TryGetValue(row.Choice, out var chance)
+                ? Percent(chance)
+                : "";
         }
+    }
+
+    /// <summary>
+    /// Each map's chance of winning as the votes stand, or null until a vote counts: with none, the roll is an even
+    /// draw over every map, and the same share on every row tells players nothing. Called only when the vote changes.
+    /// The list's only call to <see cref="VoteLogic.Odds"/>, so a change to its rules is a change here.
+    /// </summary>
+    private static Dictionary<string, float>? CurrentOdds()
+    {
+        var candidates = VoteSession.Candidates;
+        if (VoteLogic.ValidBallots(candidates, VoteSession.Votes.Values).Count == 0) return null;
+        return VoteLogic.Odds(candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel);
+    }
+
+    /// <summary>
+    /// A chance as a whole percentage, blank at zero. A map that can still win never shows 0%, and one that can still
+    /// lose never shows 100%.
+    /// </summary>
+    private static string Percent(float chance)
+    {
+        if (chance <= 0f) return "";
+        int percent = Mathf.RoundToInt(chance * 100f);
+        if (percent < 1) return "<1%";
+        // Tickets are added up in floats, so a sure thing can come out a hair under 1.
+        if (percent >= 100) return chance > 0.9999f ? "100%" : "99%";
+        return $"{percent}%";
     }
 
     private string Status(Phase phase, string? winner)
