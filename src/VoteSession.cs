@@ -33,6 +33,17 @@ internal static class VoteSession
     private static bool _lastIsHost;
     private static System.Action? _afterReveal;
     private static readonly System.Random Rng = new();
+    // The host's rules for the vote that is up. The host sets them when the vote opens, and again if it changes a
+    // setting while the vote is open, so they don't change under the reveal. Players get them with the vote.
+    private static VoteMode _mode;
+    private static IReadOnlyList<string>? _recent;
+    /// <summary>How many maps ExcludedMaps left for the vote's list to be drawn from. 0 when the host hasn't said.</summary>
+    private static int _allowedCount;
+
+    /// <summary>Host only: the run levels played this run, most recent first, for RecentMapsToSkip.</summary>
+    private static readonly List<string> Played = new();
+    /// <summary>What the host last wrote to the log about ExcludedMaps, so it says it once rather than every vote.</summary>
+    private static string? _exclusionNote;
 
     // The pool is read every frame while a vote list is on screen, so it is built once and kept until AllLevels changes.
     // PoolSource is AllLevels as it was at the last build, destroyed and null entries included, to compare against.
@@ -86,6 +97,80 @@ internal static class VoteSession
     public static IReadOnlyList<string> Candidates => _candidates.Count > 0 ? _candidates : PoolNames;
     public static string? PreviousLevel => RunManager.instance && RunManager.instance.previousRunLevel
         ? RunManager.instance.previousRunLevel.name : null;
+
+    /// <summary>
+    /// How the ballots pick the winner (the host's VoteMode). Lottery until the host's vote reaches us, and from a host
+    /// older than VoteMode, which only had the lottery.
+    /// </summary>
+    public static VoteMode Mode => _mode;
+
+    /// <summary>
+    /// The maps random draws skip where they can, most recent first: the host's RecentMapsToSkip list once its vote
+    /// reaches us. Before that, and from a host older than the setting, it is vanilla's rule: the previous level alone.
+    /// </summary>
+    public static IReadOnlyList<string> Recent => _recent ?? VanillaRecent;
+
+    private static IReadOnlyList<string> VanillaRecent =>
+        PreviousLevel is { } previous ? new[] { previous } : System.Array.Empty<string>();
+
+    /// <summary>
+    /// Each map's chance of winning this vote, plus Random's share, under the host's rules. Use this rather than
+    /// <see cref="VoteLogic.Odds"/>, so the odds players see always follow the rules the host draws with.
+    /// </summary>
+    public static Dictionary<string, float> Odds() => VoteLogic.Odds(Candidates, Votes.Values, Recent, Mode);
+
+    private static string? Resolve() => VoteLogic.Resolve(Candidates, Votes.Values, Recent, Mode, Rng);
+
+    /// <summary>The host's recent maps as its settings say now, rather than as the open vote took them.</summary>
+    private static List<string> HostRecent() => VoteLogic.Recent(PreviousLevel, Played, Plugin.RecentMapsToSkip.Value);
+
+    /// <summary>
+    /// How many maps the host's rules allow: the pool without ExcludedMaps. A shortlist is drawn from these, so a vote
+    /// list could say "3 OF" this many. Before the host's vote reaches us, and from older hosts, it is the whole pool.
+    /// </summary>
+    public static int MapsAllowed => _allowedCount > 0 ? _allowedCount : PoolNames.Count;
+
+    /// <summary>
+    /// The host: the maps its ExcludedMaps leaves in, matched by level name or by the name the vote list shows. Writes
+    /// to the log what it leaves out and any name that matches no map, once each time that changes.
+    /// </summary>
+    private static List<string> AllowedMaps()
+    {
+        var pool = PoolNames;
+        var excluded = VoteLogic.NameList(Plugin.ExcludedMaps.Value);
+        var allowed = VoteLogic.Allowed(pool, excluded, MapInfo.DisplayName);
+        if (excluded.Count == 0)
+        {
+            _exclusionNote = null;
+            return allowed;
+        }
+
+        var left = pool.Where(m => !allowed.Contains(m)).ToList();
+        var unknown = excluded.Where(n => !pool.Any(m => excluded.Comparer.Equals(m, n) || excluded.Comparer.Equals(MapInfo.DisplayName(m), n))).ToList();
+        var note = $"{string.Join(",", left)}|{string.Join(",", unknown)}|{allowed.Count}";
+        if (note == _exclusionNote) return allowed;
+        _exclusionNote = note;
+
+        static string Describe(string map) => $"{MapInfo.DisplayName(map)} ({map})";
+        if (left.Count > 0) Plugin.Log.LogInfo($"ExcludedMaps leaves out {string.Join(", ", left.Select(Describe))}");
+        else if (unknown.Count < excluded.Count) Plugin.Log.LogWarning("ExcludedMaps names every map, so it is ignored: the vote needs maps to vote on");
+        if (unknown.Count > 0)
+            Plugin.Log.LogWarning($"ExcludedMaps has no map called {string.Join(", ", unknown)}. The maps are {string.Join(", ", pool.Select(Describe))}");
+        return allowed;
+    }
+
+    /// <summary>Host only, from SetRunLevel: the run is moving on to this level.</summary>
+    public static void OnRunLevel(Level? level)
+    {
+        if (!level) return;
+        var name = level!.name;
+        Played.Remove(name);
+        Played.Insert(0, name);
+        if (Played.Count > Plugin.MaxRecentMaps) Played.RemoveRange(Plugin.MaxRecentMaps, Played.Count - Plugin.MaxRecentMaps);
+    }
+
+    /// <summary>A new run (new game, loaded save, game over): the last run's maps no longer count as recent.</summary>
+    public static void ForgetPlayed() => Played.Clear();
 
     /// <summary>
     /// Rebuilds the cached pool if AllLevels has changed since the last build: a level added or removed (custom maps
@@ -169,6 +254,7 @@ internal static class VoteSession
         {
             // Left the game: forget everything so a new session starts clean.
             if (Phase != Phase.Closed || Winner != null) ResetLocal();
+            Played.Clear();
             if (HostCheck.Forget()) Revision++;
             _lastContext = VoteContext.None;
             return;
@@ -249,6 +335,11 @@ internal static class VoteSession
         for (int i = 0; i < actors.Length && i < choices.Length; i++) Votes[actors[i]] = choices[i];
         Winner = (string)data[4] is { Length: > 0 } w ? w : null;
         _candidates = data.Length > 5 && data[5] is string[] candidates ? candidates.ToList() : new List<string>();
+        // Fields after the list came after 1.1.0, which doesn't read them. A host without them only has the lottery.
+        _mode = data.Length > 6 && data[6] is int mode && System.Enum.IsDefined(typeof(VoteMode), mode)
+            ? (VoteMode)mode : VoteMode.Lottery;
+        _recent = data.Length > 7 && data[7] is string[] recent ? recent : null;
+        _allowedCount = data.Length > 8 && data[8] is int allowed ? allowed : 0;
         Revision++;
     }
 
@@ -264,6 +355,8 @@ internal static class VoteSession
         var payload = new object[]
         {
             (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "", _candidates.ToArray(),
+            // New fields go on the end: older versions read the ones above by position and ignore the rest.
+            (int)_mode, Recent.ToArray(), _allowedCount,
         };
         _state.RaiseEvent(payload, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
     }
@@ -280,13 +373,24 @@ internal static class VoteSession
 
     private static void Draw()
     {
-        _candidates = VoteLogic.Shortlist(PoolNames, PreviousLevel, Plugin.MapLimit, Rng);
+        TakeRules();
+        var allowed = AllowedMaps();
+        _allowedCount = allowed.Count;
+        _candidates = VoteLogic.Shortlist(allowed, Recent, Plugin.MapLimit, Rng);
         if (Shortlisted) Plugin.Log.LogInfo($"Vote is on {_candidates.Count} map(s): {string.Join(", ", _candidates)}");
+        if (Recent.Count > 1) Plugin.Log.LogInfo($"Random draws skip recent maps where they can: {string.Join(", ", Recent)}");
+    }
+
+    /// <summary>The host: read its settings into the vote's rules, which go to players with the vote.</summary>
+    private static void TakeRules()
+    {
+        _mode = Plugin.Mode.Value;
+        _recent = HostRecent();
     }
 
     /// <summary>
-    /// The host changed MapsPerVote mid-game (REPOConfig): draw the open vote's list again so it applies now.
-    /// Votes for Random or a map that is still on the list stand; the rest are dropped.
+    /// The host changed MapsPerVote, RecentMapsToSkip or ExcludedMaps mid-game (REPOConfig): draw the open vote's list
+    /// again so it applies now. Votes for Random or a map that is still on the list stand; the rest are dropped.
     /// </summary>
     public static void Redraw()
     {
@@ -294,6 +398,17 @@ internal static class VoteSession
         Draw();
         foreach (var actor in Votes.Where(v => v.Value != VoteLogic.RandomChoice && !_candidates.Contains(v.Value)).Select(v => v.Key).ToList())
             Votes.Remove(actor);
+        Broadcast();
+    }
+
+    /// <summary>
+    /// The host changed VoteMode mid-game (REPOConfig): the open vote follows it now, and every player's odds with it.
+    /// Once the vote has rolled, the winner stands and the change waits for the next vote.
+    /// </summary>
+    public static void RulesChanged()
+    {
+        if (!IsHost || Phase != Phase.Open) return;
+        TakeRules();
         Broadcast();
     }
 
@@ -311,12 +426,15 @@ internal static class VoteSession
         Broadcast();
     }
 
-    /// <summary>The host drew a few maps rather than putting every one up. Players see it too: the list is synced.</summary>
-    public static bool Shortlisted => _candidates.Count > 0 && _candidates.Count < PoolNames.Count;
+    /// <summary>
+    /// The host drew a few maps (MapsPerVote) rather than putting every allowed one up. Players see it too: the list is
+    /// synced. A list that is shorter only because of ExcludedMaps isn't a draw, so this is false for it.
+    /// </summary>
+    public static bool Shortlisted => _candidates.Count > 0 && _candidates.Count < MapsAllowed;
 
     private static void BeginReveal()
     {
-        Winner = VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng);
+        Winner = Resolve();
         Phase = Phase.Revealing;
         _deadline = Time.unscaledTime + RevealSeconds;
         Plugin.Log.LogInfo($"Vote closed with {Votes.Count} ballot(s); next map: {Winner}");
@@ -343,6 +461,9 @@ internal static class VoteSession
         _deadline = -1f;
         _afterReveal = null;
         _candidates = new List<string>();
+        _mode = VoteMode.Lottery;
+        _recent = null;
+        _allowedCount = 0;
         Revision++;
     }
 
@@ -381,21 +502,23 @@ internal static class VoteSession
     }
 
     /// <summary>
-    /// Called from SetRunLevel on the host. Returns the level to load, or null to let the game pick at random
-    /// (nobody voted on a full list). An unfinished vote resolves instantly so the game never waits on us, and a
-    /// shortlist always resolves, so the next map is one of the maps that were offered.
+    /// Called from SetRunLevel on the host. Returns the level to load, or null to let the game pick at random. An
+    /// unfinished vote resolves instantly so the game never waits on us. The game is only left to pick when nobody
+    /// voted and it would pick from the same maps as the host's rules do. A shortlist, excluded maps, or skipping
+    /// anything other than the one previous map always resolve here, so the next map keeps to the rules the vote showed.
     /// </summary>
     public static Level? ConsumeWinner(RunManager rm)
     {
+        if (Phase == Phase.Closed) return DrawWithoutVote(rm);
+
         string? name = Phase switch
         {
             Phase.Locked or Phase.Revealing => Winner,
-            Phase.Open when Votes.Count > 0 || Shortlisted => VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng),
+            Phase.Open when Votes.Count > 0 || !DrawsLikeGame(Candidates, Recent) => Resolve(),
             _ => null,
         };
-        if (Phase == Phase.Closed && name == null) return null;
 
-        var level = name == null ? null : rm.levels.FirstOrDefault(l => l && l.name == name);
+        var level = Find(rm, name);
         Phase = Phase.Closed;
         Votes.Clear();
         Winner = level ? level!.name : null;
@@ -405,6 +528,28 @@ internal static class VoteSession
         if (level) Plugin.Log.LogInfo($"Loading voted map {level!.name}");
         return level;
     }
+
+    /// <summary>
+    /// No vote this time (it is switched off here). The game picks, unless the host's rules would pick from other maps:
+    /// then the host draws, so ExcludedMaps and RecentMapsToSkip hold with voting off too.
+    /// </summary>
+    private static Level? DrawWithoutVote(RunManager rm)
+    {
+        var pool = AllowedMaps();
+        var recent = HostRecent();
+        if (DrawsLikeGame(pool, recent)) return null;
+
+        var level = Find(rm, VoteLogic.Resolve(pool, System.Array.Empty<string>(), recent, Plugin.Mode.Value, Rng));
+        if (level) Plugin.Log.LogInfo($"No vote here: loading {level!.name}, drawn by the host's map rules");
+        return level;
+    }
+
+    /// <summary>Whether the game's own pick would come from the same maps as a random draw under these rules.</summary>
+    private static bool DrawsLikeGame(IReadOnlyList<string> pool, IReadOnlyList<string> recent) =>
+        VoteLogic.DrawsLikeGame(pool, recent, PoolNames, PreviousLevel);
+
+    private static Level? Find(RunManager rm, string? name) =>
+        name == null ? null : rm.levels.FirstOrDefault(l => l && l.name == name);
 
     public static string PlayerName(int actor)
     {

@@ -127,7 +127,7 @@ internal sealed class VoteUi : MonoBehaviour
     {
         _seenRevision = VoteSession.Revision;
         if (VoteSession.Phase == Phase.Revealing && VoteSession.Winner != null && _reelFor != VoteSession.Winner)
-            StartReel(VoteSession.Winner, VoteLogic.Odds(VoteSession.Candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel));
+            StartReel(VoteSession.Winner, VoteSession.Odds());
     }
 
     private static bool Typing() => !SemiFunc.NoTextInputsActive() || (ChatManager.instance && ChatManager.instance.chatActive);

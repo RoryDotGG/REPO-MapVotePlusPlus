@@ -25,6 +25,12 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<bool> VoteInTruck = null!;
     internal static ConfigEntry<bool> ShowVoteOnArrival = null!;
     internal static ConfigEntry<string> MapsPerVote = null!;
+    internal static ConfigEntry<VoteMode> Mode = null!;
+    internal static ConfigEntry<int> RecentMapsToSkip = null!;
+    internal static ConfigEntry<string> ExcludedMaps = null!;
+
+    /// <summary>The most RecentMapsToSkip goes up to, and how many played maps the host keeps track of.</summary>
+    internal const int MaxRecentMaps = 10;
 
     /// <summary>MapsPerVote as a number, or 0 when it offers every map.</summary>
     internal static int MapLimit => int.TryParse(MapsPerVote.Value, out var n) ? n : 0;
@@ -41,11 +47,21 @@ public class Plugin : BaseUnityPlugin
         // A list rather than a number so REPOConfig's in-game slider reads "All": it doesn't show descriptions.
         var mapChoices = new[] { "All" }.Concat(Enumerable.Range(2, 19).Select(n => n.ToString())).ToArray();
         MapsPerVote = Config.Bind("Voting", "MapsPerVote", "All",
-            new ConfigDescription("How many maps each vote offers. Every time a vote opens, this many are drawn at random, never including the map you just played, and Random only lands on one of them. All offers every map. The host's value is used, and changing it mid-vote draws the list again.",
+            new ConfigDescription("How many maps each vote offers. Every time a vote opens, this many are drawn at random, skipping the recent maps (see RecentMapsToSkip), and Random only lands on one of them. All offers every map. The host's value is used, and changing it mid-vote draws the list again.",
                 new AcceptableValueList<string>(mapChoices)));
+        Mode = Config.Bind("Voting", "VoteMode", VoteMode.Lottery,
+            "How the votes pick the next map. Lottery: each vote is a ticket in a draw, so 3 votes to 1 is a 75% chance. Majority: the map with the most votes wins, and a tie is drawn at random between the tied maps. A vote for Random counts as a choice of its own: if it wins, the map is random. The host's value is used.");
+        RecentMapsToSkip = Config.Bind("Voting", "RecentMapsToSkip", 1,
+            new ConfigDescription("How many of the maps played most recently this run are kept out of random draws: Random, the pick when nobody votes, and the maps MapsPerVote draws. 1 skips the map you just played, as in vanilla. 0 lets it come straight back. If too few other maps are left, the ones played longest ago come back first. A vote for a recent map still counts. It applies with voting off too. The host's value is used, and changing it mid-vote draws the list again.",
+                new AcceptableValueRange<int>(0, MaxRecentMaps)));
+        ExcludedMaps = Config.Bind("Voting", "ExcludedMaps", "",
+            "Maps that never come up: they aren't in the vote and are never drawn at random, even with voting off. A comma-separated list, naming each map as the vote list shows it (Headman Manor) or by its level name (Level - Manor), in any case. If it names every map, it's ignored. The log says which maps it leaves out, and lists every map's names if one doesn't match. The host's value is used, and changing it mid-vote draws the list again.");
 
         // REPOConfig changes settings mid-game, so apply them to the vote that is open now, not just the next one.
         MapsPerVote.SettingChanged += (_, _) => VoteSession.Redraw();
+        Mode.SettingChanged += (_, _) => VoteSession.RulesChanged();
+        RecentMapsToSkip.SettingChanged += (_, _) => VoteSession.Redraw();
+        ExcludedMaps.SettingChanged += (_, _) => VoteSession.Redraw();
         VoteInLobbyMenu.SettingChanged += (_, _) => VoteSession.CloseIfSwitchedOff();
         VoteInTruck.SettingChanged += (_, _) => VoteSession.CloseIfSwitchedOff();
 
@@ -78,6 +94,19 @@ internal static class Patches
         __instance.previousRunLevel = level;
         return false;
     }
+
+    /// <summary>Host only: note the level the run moves on to, whoever picked it, for RecentMapsToSkip.</summary>
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.SetRunLevel))]
+    [HarmonyPostfix]
+    private static void RunLevelSet(RunManager __instance)
+    {
+        if (SemiFunc.IsMasterClientOrSingleplayer()) VoteSession.OnRunLevel(__instance.levelCurrent);
+    }
+
+    /// <summary>The game starts a run afresh (new game, loaded save, game over): the last run's maps aren't recent now.</summary>
+    [HarmonyPatch(typeof(RunManager), nameof(RunManager.ResetProgress))]
+    [HarmonyPostfix]
+    private static void RunReset() => VoteSession.ForgetPlayed();
 
     /// <summary>Host pressing Start in the lobby menu plays the reveal first, then starts for real.</summary>
     [HarmonyPatch(typeof(MenuPageLobby), nameof(MenuPageLobby.ButtonStart))]
