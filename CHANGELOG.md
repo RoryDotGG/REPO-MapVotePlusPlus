@@ -5,6 +5,7 @@
 - The host can choose how the votes pick the next map with the new `VoteMode` setting. **Lottery** works as before: each vote is a ticket, so 3 votes to 1 is a 75% chance. With **Majority**, the map with the most votes wins, and a tie is drawn at random between the tied maps.
 - The new `RecentMapsToSkip` setting keeps the last few maps played this run out of Random, out of the pick when nobody votes, and out of the maps `MapsPerVote` draws. The default of 1 skips only the map you just played, as before.
 - The new `ExcludedMaps` setting leaves maps out of the vote and out of random draws altogether, for example to drop a level you don't like from a custom map pack. Name each map as the vote list shows it or by its level name.
+- The host can pick the next map outright, for a stream or a planned run, by holding **Shift** and clicking it or pressing its number. The reveal plays straight away and lands on that map with **HOST'S PICK** under it. **Shift** with Random rolls a random map instead. Players' clicks are always votes.
 - Once someone has voted, each map's row shows its chance of winning, so you can see how far ahead the leader really is.
 - A long map list in the lobby now scrolls instead of shrinking. Up to ten rows show at once, and the mouse wheel moves the list.
 - The reveal reel shows each map's art behind its name, and says how the winner won when it lands, for example **3 OF 4 VOTES**.
