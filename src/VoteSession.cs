@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using ExitGames.Client.Photon;
 using Photon.Pun;
@@ -33,6 +34,13 @@ internal static class VoteSession
     private static System.Action? _afterReveal;
     private static readonly System.Random Rng = new();
 
+    // The pool is read every frame while a vote list is on screen, so it is built once and kept until AllLevels changes.
+    // PoolSource is AllLevels as it was at the last build, destroyed and null entries included, to compare against.
+    private static readonly List<Level> PoolSource = new();
+    private static IReadOnlyList<Level> _pool = System.Array.Empty<Level>();
+    private static IReadOnlyList<string> _poolNames = System.Array.Empty<string>();
+    private static Dictionary<string, Level> _poolByName = new();
+
     private static NetworkedEvent _cast = null!;
     private static NetworkedEvent _state = null!;
     private static NetworkedEvent _syncRequest = null!;
@@ -43,17 +51,84 @@ internal static class VoteSession
     public static int PlayerCount => SemiFunc.IsMultiplayer() ? PhotonNetwork.CurrentRoom?.PlayerCount ?? 1 : 1;
     public static string? MyVote => Votes.TryGetValue(LocalActor, out var v) ? v : null;
 
-    /// <summary>Every run level the game knows about, including ones added by other mods.</summary>
-    public static List<Level> Pool => Levels.AllLevels.Where(l => l).ToList();
-    public static List<string> PoolNames => Pool.Select(l => l.name).ToList();
+    /// <summary>Every run level the game knows about, including ones added by other mods. Destroyed levels are left out.</summary>
+    public static IReadOnlyList<Level> Pool
+    {
+        get
+        {
+            SyncPool();
+            return _pool;
+        }
+    }
+
+    /// <summary>The asset names of <see cref="Pool"/>, in the same order.</summary>
+    public static IReadOnlyList<string> PoolNames
+    {
+        get
+        {
+            SyncPool();
+            return _poolNames;
+        }
+    }
+
+    /// <summary>Finds a level in <see cref="Pool"/> by asset name. If two share a name, the first one wins.</summary>
+    public static bool TryGetPoolLevel(string name, [NotNullWhen(true)] out Level? level)
+    {
+        SyncPool();
+        return _poolByName.TryGetValue(name, out level);
+    }
+
     /// <summary>
     /// The maps up for this vote: a random few when the host limits MapsPerVote, otherwise all of them. Votes, Random
     /// and the no-vote draw all stay within it. It is the whole pool until the host's first vote reaches us, and it
     /// keeps the last vote's maps until the next vote opens, so the list doesn't change under the reveal.
     /// </summary>
-    public static List<string> Candidates => _candidates.Count > 0 ? _candidates : PoolNames;
+    public static IReadOnlyList<string> Candidates => _candidates.Count > 0 ? _candidates : PoolNames;
     public static string? PreviousLevel => RunManager.instance && RunManager.instance.previousRunLevel
         ? RunManager.instance.previousRunLevel.name : null;
+
+    /// <summary>
+    /// Rebuilds the cached pool if AllLevels has changed since the last build: a level added or removed (custom maps
+    /// can register late) or one destroyed. Checking is one pass over the list and allocates nothing. Each build makes
+    /// new read-only lists, so anyone still holding the old ones keeps a list that doesn't change under them.
+    /// </summary>
+    private static void SyncPool()
+    {
+        var all = Levels.AllLevels;
+        if (!PoolStale(all)) return;
+
+        PoolSource.Clear();
+        var levels = new List<Level>(all.Count);
+        var names = new List<string>(all.Count);
+        var byName = new Dictionary<string, Level>(all.Count);
+        for (int i = 0; i < all.Count; i++)
+        {
+            var level = all[i];
+            PoolSource.Add(level);
+            if (!level) continue;
+            var name = level.name;
+            levels.Add(level);
+            names.Add(name);
+            byName.TryAdd(name, level);
+        }
+        _pool = levels.AsReadOnly();
+        _poolNames = names.AsReadOnly();
+        _poolByName = byName;
+    }
+
+    private static bool PoolStale(IReadOnlyList<Level> all)
+    {
+        if (all.Count != PoolSource.Count) return true;
+        int live = 0;
+        for (int i = 0; i < all.Count; i++)
+        {
+            var level = all[i];
+            if (!ReferenceEquals(level, PoolSource[i])) return true;
+            if (level) live++;
+        }
+        // Same entries as last time. A destroyed level never comes back, so if one has gone since, fewer are live.
+        return live != _pool.Count;
+    }
 
     public static VoteContext Context
     {

@@ -223,7 +223,7 @@ internal sealed class VoteUi : MonoBehaviour
         // Fill the reel with names in proportion to their odds so it "feels" like the vote.
         var candidates = VoteSession.Candidates;
         var weighted = candidates.Where(n => odds.TryGetValue(n, out var o) && o > 0f).ToList();
-        if (weighted.Count == 0) weighted = candidates;
+        if (weighted.Count == 0) weighted = candidates.ToList();
         const int cellCount = 34;
         _reelWinner = cellCount - 4;
         foreach (var c in _cells) Destroy(c.gameObject);
