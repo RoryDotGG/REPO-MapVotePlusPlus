@@ -18,7 +18,9 @@ internal sealed class NativeBoard : MonoBehaviour
     // Lobby page space is the game's 720x405 menu UI with its origin bottom-left. The panel sits right of the lobby
     // panel, level with its top, and never runs below its bottom.
     private const float LobbyLeft = 380f, LobbyTop = 310f, LobbyBottom = 23f, LobbyWidth = 310f, LobbyHeader = 62f;
-    private const float Pad = 10f, MaxPitch = 24f, MaxNameSize = 18f;
+    private const float Pad = 10f, MaxPitch = 24f, MaxNameSize = 18f, ScrollBarWidth = 3f;
+    /// <summary>Most rows the lobby panel shows at once: Random and the nine maps the number keys reach. More maps scroll.</summary>
+    private const int LobbyRows = 10;
     /// <summary>Under the list, bottom-left of the right-hand popup: where REPOConfig puts its Save Changes button.</summary>
     private static readonly Vector2 SkipPosition = new(370f, 18f);
 
@@ -27,7 +29,7 @@ internal sealed class NativeBoard : MonoBehaviour
         public string Choice = "";
         public RectTransform Rect = null!;
         public REPOButton Button = null!;
-        public TextMeshProUGUI Voters = null!, Count = null!;
+        public TextMeshProUGUI Voters = null!, Count = null!, Odds = null!;
     }
 
     private static readonly List<NativeBoard> Live = new();
@@ -36,7 +38,12 @@ internal sealed class NativeBoard : MonoBehaviour
 
     private MenuPage? _page;
     private bool _lobby, _prompt;
-    private RectTransform? _lobbyBody, _lobbyPanel;
+    private RectTransform? _lobbyBody, _lobbyPanel, _scrollTrack, _scrollHandle;
+    // The lobby list's window: the first row in view, how many rows fit, and their height.
+    private int _first, _shown;
+    private float _pitch;
+    private int _lastHovered = -1;
+    private string? _followedWinner;
     private REPOPopupPage? _popup;
     private float _rowWidth;
     private TMP_FontAsset? _font;
@@ -69,7 +76,7 @@ internal sealed class NativeBoard : MonoBehaviour
     {
         // The board lives on the root, which stays active so it can show and hide the body. The body spans all the
         // room the panel may use and never resizes: its children keep a new rect's centre anchors, so a resize would
-        // shift the header. The backdrop is sized to however many maps are up for the vote.
+        // shift the header. The backdrop is sized to the rows in view.
         var root = Ui.Rect("MapVotePlusPlus", page);
         root.pivot = new Vector2(0f, 1f);
         root.localPosition = new Vector2(LobbyLeft, LobbyTop);
@@ -99,6 +106,16 @@ internal sealed class NativeBoard : MonoBehaviour
         line.pivot = Vector2.zero;
         line.localPosition = new Vector2(Pad, -LobbyHeader + 3f);
         line.sizeDelta = new Vector2(inner, 1.5f);
+
+        // In the panel's right margin, beside the rows. Shown only when there are more maps than fit.
+        var track = Ui.Image("ScrollBar", body, Ui.Muted.WithAlpha(0.25f)).rectTransform;
+        track.pivot = new Vector2(0f, 1f);
+        track.localPosition = new Vector2(LobbyWidth - (Pad + ScrollBarWidth) / 2f, -LobbyHeader);
+        var handle = Ui.Image("Handle", track, Ui.Amber.WithAlpha(0.8f)).rectTransform;
+        handle.pivot = new Vector2(0f, 1f);
+        track.gameObject.SetActive(false);
+        board._scrollTrack = track;
+        board._scrollHandle = handle;
 
         // Build the rows first: game buttons set themselves up in Awake, which doesn't run under an inactive parent.
         board.Refresh();
@@ -199,14 +216,16 @@ internal sealed class NativeBoard : MonoBehaviour
 
         if (_lobby)
         {
-            float pitch = Mathf.Min(MaxPitch, (LobbyTop - LobbyBottom - LobbyHeader - Pad) / options.Count);
-            _lobbyPanel!.sizeDelta = new Vector2(LobbyWidth, LobbyHeader + options.Count * pitch + Pad);
-            float y = -LobbyHeader;
-            foreach (var (choice, level) in options)
-            {
-                y -= pitch;
-                BuildRow(_lobbyBody!, choice, level, new Vector2(Pad, y), _rowWidth, pitch);
-            }
+            // Up to LobbyRows rows share the panel's height, none taller than MaxPitch. A longer list (a custom map
+            // pack) keeps that smallest height and scrolls, rather than shrinking its names until they can't be read.
+            _shown = Mathf.Min(options.Count, LobbyRows);
+            _pitch = Mathf.Min(MaxPitch, (LobbyTop - LobbyBottom - LobbyHeader - Pad) / _shown);
+            _lobbyPanel!.sizeDelta = new Vector2(LobbyWidth, LobbyHeader + _shown * _pitch + Pad);
+            foreach (var (choice, level) in options) BuildRow(_lobbyBody!, choice, level, Vector2.zero, _rowWidth, _pitch);
+            _first = 0;
+            _lastHovered = -1;
+            _followedWinner = null;
+            PlaceRows();
         }
         else
         {
@@ -217,7 +236,7 @@ internal sealed class NativeBoard : MonoBehaviour
         }
     }
 
-    /// <summary>A map's colour tab and thumbnail, its name as a game menu button, and who voted for it.</summary>
+    /// <summary>A map's colour tab and thumbnail, its name as a game menu button, who voted for it and its chance of winning.</summary>
     private RectTransform BuildRow(Transform parent, string choice, Level? level, Vector2 position, float width, float pitch)
     {
         var rect = Ui.Rect(choice, parent);
@@ -235,7 +254,7 @@ internal sealed class NativeBoard : MonoBehaviour
         float thumbHeight = pitch - 4f, thumbWidth = thumbHeight * 1.8f;
         Thumbnail(rect, info, new Vector2(6f, 2f), new Vector2(thumbWidth, thumbHeight));
 
-        float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.62f;
+        float size = Mathf.Min(MaxNameSize, pitch * 0.75f), nameX = thumbWidth + 12f, votersX = width * 0.6f;
         var button = MenuAPI.CreateREPOButton(choice, () => Pick(choice), rect);
         var name = button.labelTMP;
         name.fontSize = size;
@@ -244,10 +263,15 @@ internal sealed class NativeBoard : MonoBehaviour
         button.rectTransform.localPosition = new Vector2(nameX, Mathf.Max(0f, (pitch - name.GetPreferredValues("Ag").y) / 2f));
         _normal = button.menuButton.colorNormal;
 
-        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(width - votersX - 34f, pitch),
+        // From the right: the chance of winning (room for "100%"), the vote count (two digits), then who voted.
+        float oddsSize = size * 0.7f, oddsWidth = oddsSize * 2.2f, countWidth = size * 1.2f;
+        float countX = width - oddsWidth - 3f - countWidth;
+        var voters = Label("Voters", rect, size * 0.62f, Ui.Muted, new Vector2(votersX, 0f), new Vector2(countX - 4f - votersX, pitch),
             TextAlignmentOptions.MidlineRight);
-        var count = Label("Count", rect, size, Ui.Text, new Vector2(width - 28f, 0f), new Vector2(28f, pitch), TextAlignmentOptions.MidlineRight);
-        _rows.Add(new Row { Choice = choice, Rect = rect, Button = button, Voters = voters, Count = count });
+        var count = Label("Count", rect, size, Ui.Text, new Vector2(countX, 0f), new Vector2(countWidth, pitch), TextAlignmentOptions.MidlineRight);
+        var odds = Label("Odds", rect, oddsSize, Ui.Muted, new Vector2(width - oddsWidth, 0f), new Vector2(oddsWidth, pitch),
+            TextAlignmentOptions.MidlineRight);
+        _rows.Add(new Row { Choice = choice, Rect = rect, Button = button, Voters = voters, Count = count, Odds = odds });
         return rect;
     }
 
@@ -292,8 +316,81 @@ internal sealed class NativeBoard : MonoBehaviour
             return;
         }
         Pick(_rows[index].Choice);
+        if (_lobby) ShowRow(index);
         Ui.Click(MenuManager.MenuClickEffectType.Confirm);
     }
+
+    // ---- lobby scrolling -----------------------------------------------------------------
+
+    /// <summary>
+    /// Puts the rows in view in their slots and switches the rest off, so a row out of view can't be hovered, clicked
+    /// or reached with the keyboard. Only called when the window moves or the rows are built.
+    /// </summary>
+    private void PlaceRows()
+    {
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            bool inView = i >= _first && i < _first + _shown;
+            var row = _rows[i].Rect;
+            if (row.gameObject.activeSelf != inView) row.gameObject.SetActive(inView);
+            if (inView) row.localPosition = new Vector2(Pad, -LobbyHeader - (i - _first + 1) * _pitch);
+        }
+
+        bool scrolls = _rows.Count > _shown;
+        _scrollTrack!.gameObject.SetActive(scrolls);
+        if (!scrolls) return;
+        float height = _shown * _pitch;
+        _scrollTrack.sizeDelta = new Vector2(ScrollBarWidth, height);
+        _scrollHandle!.sizeDelta = new Vector2(ScrollBarWidth, height * _shown / _rows.Count);
+        _scrollHandle.localPosition = new Vector2(0f, -height * _first / _rows.Count);
+    }
+
+    private void ScrollTo(int first)
+    {
+        first = Mathf.Clamp(first, 0, Mathf.Max(0, _rows.Count - _shown));
+        if (first == _first) return;
+        _first = first;
+        PlaceRows();
+    }
+
+    /// <summary>Scrolls the least distance that brings a row into view.</summary>
+    private void ShowRow(int index)
+    {
+        if (index < 0) return;
+        if (index < _first) ScrollTo(index);
+        else if (index >= _first + _shown) ScrollTo(index - _shown + 1);
+    }
+
+    /// <summary>
+    /// The mouse wheel over the panel moves the list a row a notch, as the game's own scroll boxes do. A row picked
+    /// with the keyboard or a gamepad at either end of the window scrolls the next one into view, since the game's
+    /// navigation can't reach a row that is switched off. Each frame this only reads the wheel and the rows' hover
+    /// flags: the game's cursor check, which allocates, runs only on a wheel notch or when the hovered row changes.
+    /// </summary>
+    private void ScrollLobby()
+    {
+        var menu = MenuManager.instance;
+        if (_rows.Count <= _shown || !menu || menu.currentMenuPage != _page) return;
+
+        float wheel = SemiFunc.InputScrollY();
+        if (wheel != 0f && MouseOver(_lobbyPanel!)) ScrollTo(_first + (wheel > 0f ? -1 : 1));
+
+        int hovered = -1;
+        for (int i = _first; i < _first + _shown; i++)
+        {
+            if (!_rows[i].Button.menuButton.hovering) continue;
+            hovered = i;
+            break;
+        }
+        if (hovered == _lastHovered) return;
+        _lastHovered = hovered;
+        bool atTop = hovered > 0 && hovered == _first;
+        bool atBottom = hovered >= 0 && hovered < _rows.Count - 1 && hovered == _first + _shown - 1;
+        // The cursor hovers rows too. Scrolling under it would hover the next row, and that one the next.
+        if ((atTop || atBottom) && !MouseOver(_rows[hovered].Rect)) ScrollTo(_first + (atTop ? -1 : 1));
+    }
+
+    private bool MouseOver(RectTransform rect) => SemiFunc.UIMouseHover(_page, rect, null);
 
     // ---- state ---------------------------------------------------------------------------
 
@@ -309,6 +406,7 @@ internal sealed class NativeBoard : MonoBehaviour
         // Esc closes the truck vote; don't let the game also open its escape menu on the same press.
         if (!_lobby && GameDirector.instance) GameDirector.instance.disableEscMenuTimer = 0.2f;
         Refresh();
+        if (_lobby) ScrollLobby();
     }
 
     private void Refresh()
@@ -324,6 +422,12 @@ internal sealed class NativeBoard : MonoBehaviour
         string? winner = VoteUi.Instance ? VoteUi.Instance!.RevealedWinner : VoteSession.Winner;
         string? mine = VoteSession.MyVote;
         _status.text = problem?.Status ?? Status(phase, winner);
+        if (_lobby && winner != _followedWinner)
+        {
+            // Bring the winner into view when the roll lands.
+            _followedWinner = winner;
+            if (winner != null) ShowRow(_rows.FindIndex(r => r.Choice == winner));
+        }
 
         // MenuButton paints its text with colorNormal whenever it isn't hovered or pressed.
         foreach (var row in _rows)
@@ -343,13 +447,46 @@ internal sealed class NativeBoard : MonoBehaviour
         _hint.text = hint;
         if (_hintElement) _hintElement!.visibility = hint.Length > 0;
 
+        // Each vote is a lottery ticket, so the maps' chances show how far ahead the leader really is. Random's own row
+        // stays blank: its tickets are already spread across the maps' chances, and its share would push the column
+        // past 100%.
+        var odds = problem == null ? CurrentOdds() : null;
         foreach (var row in _rows)
         {
             var voters = VoteSession.Votes.Where(v => v.Value == row.Choice).Select(v => v.Key).OrderBy(a => a).ToList();
             row.Count.text = voters.Count > 0 ? voters.Count.ToString() : "";
             row.Voters.text = string.Join(" ",
                 voters.Select(a => $"<color=#{Ui.HexOf(Ui.PlayerColor(a))}>{VoteSession.PlayerName(a).ToUpperInvariant()}</color>"));
+            row.Odds.text = odds != null && row.Choice != VoteLogic.RandomChoice && odds.TryGetValue(row.Choice, out var chance)
+                ? Percent(chance)
+                : "";
         }
+    }
+
+    /// <summary>
+    /// Each map's chance of winning as the votes stand, or null until a vote counts: with none, the roll is an even
+    /// draw over every map, and the same share on every row tells players nothing. Called only when the vote changes.
+    /// The list's only call to <see cref="VoteLogic.Odds"/>, so a change to its rules is a change here.
+    /// </summary>
+    private static Dictionary<string, float>? CurrentOdds()
+    {
+        var candidates = VoteSession.Candidates;
+        if (VoteLogic.ValidBallots(candidates, VoteSession.Votes.Values).Count == 0) return null;
+        return VoteLogic.Odds(candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel);
+    }
+
+    /// <summary>
+    /// A chance as a whole percentage, blank at zero. A map that can still win never shows 0%, and one that can still
+    /// lose never shows 100%.
+    /// </summary>
+    private static string Percent(float chance)
+    {
+        if (chance <= 0f) return "";
+        int percent = Mathf.RoundToInt(chance * 100f);
+        if (percent < 1) return "<1%";
+        // Tickets are added up in floats, so a sure thing can come out a hair under 1.
+        if (percent >= 100) return chance > 0.9999f ? "100%" : "99%";
+        return $"{percent}%";
     }
 
     private string Status(Phase phase, string? winner)

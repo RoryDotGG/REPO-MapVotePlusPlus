@@ -26,20 +26,39 @@ body { position: relative; }
 .vote-title { position: absolute; left: 10px; top: 9px; font: 400 24px/30px Teko, sans-serif; color: #ffb31a; }
 .vote-status { position: absolute; left: 10px; top: 39px; font: 400 11px/16px Teko, sans-serif; letter-spacing: 0.3px; color: #8e887e; }
 .vote-line { position: absolute; left: 10px; top: 57.5px; width: 290px; height: 1.5px; background: rgba(255, 179, 26, 0.8); }
-.rows { --w: 290px; position: absolute; left: 10px; width: var(--w); }
-.row { position: relative; height: 24px; }
-.row i { position: absolute; left: 0; top: 4.8px; width: 3px; height: 14.4px; }
+/* --w is the row width and --p the row height (pitch); every size inside a row follows from them, as in BuildRow. */
+.rows { --w: 290px; --p: 24px; --s: min(18px, calc(var(--p) * 0.75)); position: absolute; left: 10px; width: var(--w); }
+.row { position: relative; height: var(--p); }
+.row i { position: absolute; left: 0; top: calc(var(--p) * 0.2); width: 3px; height: calc(var(--p) * 0.6); }
 .row .thumb {
-  position: absolute; left: 6px; top: 2px; width: 36px; height: 20px;
+  position: absolute; left: 6px; top: 2px; width: calc((var(--p) - 4px) * 1.8); height: calc(var(--p) - 4px);
   background-position: center; background-size: cover; background-repeat: no-repeat;
 }
-.row .thumb.random { background: rgba(255, 179, 26, 0.22); color: #ffb31a; text-align: center; font: 400 17px/23px Teko, sans-serif; }
-.row b { position: absolute; left: 48px; top: 0; font: 400 18px/25px Teko, sans-serif; color: #808080; white-space: nowrap; }
-.row em {
-  position: absolute; left: calc(var(--w) * 0.62); width: calc(var(--w) * 0.38 - 34px); top: 0; text-align: right;
-  font: normal 400 11.2px/25px Teko, sans-serif; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden;
+.row .thumb.random {
+  background: rgba(255, 179, 26, 0.22); color: #ffb31a; text-align: center;
+  font-family: Teko, sans-serif; font-weight: 400; font-size: calc((var(--p) - 4px) * 0.85); line-height: calc(var(--p) - 1px);
 }
-.row s { position: absolute; right: 0; width: 28px; top: 0; text-align: right; text-decoration: none; font: 400 18px/25px Teko, sans-serif; color: #f3eee4; }
+/* A map without loading-screen art: its initial on its colour (set inline). */
+.row .thumb.initial {
+  color: rgba(20, 20, 20, 0.75); text-align: center;
+  font-family: Teko, sans-serif; font-weight: 400; font-size: calc((var(--p) - 4px) * 0.85); line-height: calc(var(--p) - 1px);
+}
+.row b, .row em, .row s, .row u {
+  position: absolute; top: 0; white-space: nowrap; text-decoration: none;
+  font-family: Teko, sans-serif; font-style: normal; font-weight: 400; line-height: calc(var(--p) + 1px);
+}
+.row b { left: calc((var(--p) - 4px) * 1.8 + 12px); font-size: var(--s); color: #808080; }
+/* From the right: the chance of winning, the vote count, then who voted. */
+.row em {
+  left: calc(var(--w) * 0.6); width: calc(var(--w) * 0.4 - var(--s) * 2.74 - 7px); text-align: right;
+  font-size: calc(var(--s) * 0.62); letter-spacing: 0.3px; overflow: hidden;
+}
+.row s { right: calc(var(--s) * 1.54 + 3px); width: calc(var(--s) * 1.2); text-align: right; font-size: var(--s); color: #f3eee4; }
+/* The map's chance of winning, blank until a vote is in and on the Random row. */
+.row u { right: 0; width: calc(var(--s) * 1.54); text-align: right; font-size: calc(var(--s) * 0.7); color: #8e887e; }
+/* The lobby list's scroll bar, in the panel's right margin, shown when there are more maps than rows. */
+.vote-scroll { position: absolute; left: 303.5px; width: 3px; background: rgba(142, 136, 126, 0.25); }
+.vote-scroll > div { position: absolute; left: 0; width: 3px; background: rgba(255, 179, 26, 0.8); }
 /* Stand-ins for each level's loading-screen art, which is what the game shows in the thumbnail. */
 .art-manor { background-image: url("art/manor.svg"); }
 .art-academy { background-image: url("art/academy.svg"); }
