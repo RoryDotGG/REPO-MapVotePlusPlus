@@ -16,7 +16,8 @@ public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "RoryDotGG.MapVotePlusPlus";
     public const string Name = "MapVote++";
-    public const string Version = "1.1.0";
+    /// <summary>Set from Version in MapVotePlusPlus.csproj at build time. Bump it there.</summary>
+    public const string Version = BuildInfo.Version;
 
     internal static ManualLogSource Log = null!;
     internal static ConfigEntry<Key> ToggleKey = null!;

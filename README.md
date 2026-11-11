@@ -116,7 +116,7 @@ To build the Thunderstore package (`dist/MapVotePlusPlus-<version>.zip`, ready t
 dotnet build -c Release -t:ThunderstorePackage
 ```
 
-To release, bump the version in `MapVotePlusPlus.csproj`, `manifest.json` and `src/Plugin.cs`, add a `CHANGELOG.md` entry, and merge it to `main`. The package build stops if the three versions don't match. Then tag that commit and push the tag:
+To release, bump `<Version>` in `MapVotePlusPlus.csproj`, add a `CHANGELOG.md` entry, and merge it to `main`. That's the only place the version lives: the build writes it into the plugin, and the package build adds it to the zip's `manifest.json`. Then tag that commit and push the tag:
 
 ```bash
 git tag v1.0.1

@@ -21,10 +21,12 @@ jobs:
 
       - name: Check the tag and changelog
         id: version
+        env:
+          DOTNET_NOLOGO: true
         run: |
-          version=$(jq -r .version_number manifest.json)
+          version=$(dotnet msbuild MapVotePlusPlus.csproj -getProperty:Version)
           if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in manifest.json"
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in MapVotePlusPlus.csproj"
             exit 1
           fi
           awk -v v="$version" '/^## /{p = $2 == v; next} p' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
