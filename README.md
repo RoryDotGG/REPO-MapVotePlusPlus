@@ -22,6 +22,7 @@
 - The host can limit how many maps each vote offers with `MapsPerVote`. Each time a vote opens, that many maps are drawn at random, skipping recent maps (by default, the one you just played). Random, and the pick when nobody votes, only land on one of those maps. The vote list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**.
 - The host can keep the last few maps played this run out of random draws with `RecentMapsToSkip`. That covers Random, the pick when nobody votes and the maps `MapsPerVote` draws. `1` is vanilla's rule: skip the map you just played. `0` lets it come straight back. If too few other maps are left, the ones played longest ago come back first. A vote for a recent map still counts. It applies with voting off too.
 - The host can drop maps with `ExcludedMaps`, for example bad levels in a custom pack. They aren't on the vote list and never come up at random, even with voting off. Name each map as the vote list shows it (`Headman Manor`) or by its level name (`Level - Manor`), in any case. If the list names every map, it's ignored. The host's log says which maps it leaves out, and lists every map's names if one doesn't match.
+- The host can skip the vote and pick the next map outright, for a stream or a planned run, by shift-clicking it on the vote list (see [How to vote](#how-to-vote)). That map wins whatever the votes say, even if it's one `RecentMapsToSkip` would skip, and it stands if the host excludes it afterwards. The host can only pick a map that's on the list, so with `MapsPerVote` set, only one of the maps drawn for that vote. If the host shift-clicks Random, the map is drawn at random from the list, skipping recent maps as usual.
 
 ## What it looks like
 
@@ -54,6 +55,7 @@ In the truck, the same list pops up when you arrive, so you can pick a map or sk
 - In the truck, the vote rolls when someone sends the truck off. The reveal plays, landing on a random map if nobody voted, and the truck leaves once it lands.
 - The truck's **MAP VOTE** box pulses until you vote. If you skip, it stops pulsing, and you can still vote with **M** until the truck leaves. Turn off `ShowVoteOnArrival` to open the truck vote yourself instead.
 - The reveal is a slot-machine reel in the middle of the screen, with the game dimmed behind it. It lands on the next map for everyone at once, and the vote list doesn't show the winner until it does.
+- **Host only:** hold `Shift` and click a map, or press its number, to pick it for everyone. The vote ends there and the reveal plays straight away. It lands on your map with **HOST'S PICK** under it, and the game starts on that map when you press **Start Game**, or when the truck leaves. `Shift` with Random (or `Shift`+`R`) rolls a random map straight away instead. A pick can't be undone. In multiplayer, the host's vote list says **SHIFT-CLICK TO PICK FOR EVERYONE** while the vote is open. Players never see it, and for them a click is always a vote.
 
 ## Install
 
@@ -98,7 +100,7 @@ With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) instal
 
 ## How it works
 
-Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately. The state carries the host's vote rules too, so every player's odds and reveal follow the host's settings. To load the winner, the host patches `RunManager.SetRunLevel`, and the game's own level sync tells every client which map it is. The same patch notes each level the run moves on to, for `RecentMapsToSkip`, and a patch on `RunManager.ResetProgress` forgets them when a new run starts.
+Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately. The state carries the host's vote rules too, so every player's odds and reveal follow the host's settings, and it says when the host picked the map itself. To load the winner, the host patches `RunManager.SetRunLevel`, and the game's own level sync tells every client which map it is. The same patch notes each level the run moves on to, for `RecentMapsToSkip`, and a patch on `RunManager.ResetProgress` forgets them when a new run starts.
 
 The host also puts its MapVote++ version and vote settings in the Photon room's custom properties. Every player gets these on joining, whatever mods they run. That's how a player tells a host without the mod apart from a vote that hasn't reached them yet.
 

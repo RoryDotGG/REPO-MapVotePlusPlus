@@ -159,6 +159,18 @@ public static class VoteLogic
         return odds;
     }
 
+    /// <summary>
+    /// The map the host's own pick sends everyone to, whatever the votes say. A map on the list is the next map, even a
+    /// recent one: the host chose it on purpose. Random draws from the random pool, as a vote for Random would. Null for
+    /// a map that isn't on the list, and for an empty list.
+    /// </summary>
+    public static string? ResolveHostPick(IReadOnlyList<string> pool, string choice, IReadOnlyList<string> recent, Random rng)
+    {
+        if (choice != RandomChoice) return pool.Contains(choice) ? choice : null;
+        var randomPool = RandomPool(pool, recent);
+        return randomPool.Count > 0 ? randomPool[rng.Next(randomPool.Count)] : null;
+    }
+
     /// <summary>Draws the winning map under <paramref name="mode"/>. Returns null only for an empty pool.</summary>
     public static string? Resolve(IReadOnlyList<string> pool, IEnumerable<string> ballots, IReadOnlyList<string> recent,
         VoteMode mode, Random rng)
