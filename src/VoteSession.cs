@@ -169,6 +169,7 @@ internal static class VoteSession
         {
             // Left the game: forget everything so a new session starts clean.
             if (Phase != Phase.Closed || Winner != null) ResetLocal();
+            if (HostCheck.Forget()) Revision++;
             _lastContext = VoteContext.None;
             return;
         }
@@ -179,15 +180,23 @@ internal static class VoteSession
         // the player looks like the host. A context change alone would never ask the real host for the vote.
         if (context != _lastContext || isHost != _lastIsHost)
         {
+            // Looking like the host, the joiner opened a vote of its own. Drop it now the real host is known: left up, it
+            // would take clicks that go nowhere when the host has no MapVote++ to answer.
+            if (_lastIsHost && !isHost) ResetLocal();
             _lastContext = context;
             _lastIsHost = isHost;
             if (context != VoteContext.None)
             {
-                if (!isHost) _syncRequest.RaiseEvent(null!, NetworkingEvents.RaiseMasterClient, SendOptions.SendReliable);
+                if (!isHost)
+                {
+                    _syncRequest.RaiseEvent(null!, NetworkingEvents.RaiseMasterClient, SendOptions.SendReliable);
+                    HostCheck.Asked();
+                }
                 else if (Phase == Phase.Closed) Open();
                 else Broadcast();
             }
         }
+        if (HostCheck.Update(context, isHost)) Revision++;
 
         if (!isHost || context == VoteContext.None || _deadline < 0f || Time.unscaledTime < _deadline) return;
         if (Phase == Phase.Revealing) Lock();
@@ -196,7 +205,7 @@ internal static class VoteSession
     /// <summary>Vote for a map, or toggle the vote off by picking the same option again.</summary>
     public static void Cast(string choice)
     {
-        if (Phase != Phase.Open) return;
+        if (Phase != Phase.Open || HostCheck.Support != HostSupport.Ok) return;
         if (MyVote == choice) choice = "";
 
         // Optimistic local update so the click feels instant; the host's broadcast is the truth.
@@ -228,6 +237,9 @@ internal static class VoteSession
     private static void OnState(EventData e)
     {
         if (IsHost || e.CustomData is not object[] { Length: >= 5 } data) return;
+        // A host on a different protocol may lay the state out differently: don't read it as ours.
+        if (HostCheck.Support == HostSupport.Mismatch) return;
+        HostCheck.Heard();
         Phase = (Phase)(int)data[0];
         float left = (float)data[1];
         _deadline = left < 0f ? -1f : Time.unscaledTime + left;
