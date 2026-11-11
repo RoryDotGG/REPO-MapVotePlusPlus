@@ -155,7 +155,7 @@ internal sealed class VoteUi : MonoBehaviour
             _promptPending = false;
             return;
         }
-        if (phase != Phase.Open || Time.unscaledTime - _arrivedAt < PromptDelay || Typing()) return;
+        if (phase != Phase.Open || HostCheck.Support != HostSupport.Ok || Time.unscaledTime - _arrivedAt < PromptDelay || Typing()) return;
         if (!NativeBoard.OpenTruckPage(prompt: true)) return; // the escape menu has the screen; try again once it closes
 
         _promptPending = false;
@@ -167,7 +167,8 @@ internal sealed class VoteUi : MonoBehaviour
     private void AnimateChip()
     {
         var phase = VoteSession.Phase;
-        bool needsMe = phase == Phase.Open && VoteSession.MyVote == null && !_skipped;
+        var problem = HostCheck.Problem;
+        bool needsMe = phase == Phase.Open && VoteSession.MyVote == null && !_skipped && problem == null;
         // Truck only: in the lobby the vote list is always on screen.
         bool show = _context == VoteContext.Truck && (_reelStart < 0f || Time.unscaledTime - _reelStart > SpinSeconds + HoldSeconds);
         _chipT = Ui.Damp(_chipT, show ? 1f : 0f, 12f);
@@ -179,7 +180,13 @@ internal sealed class VoteUi : MonoBehaviour
         string status = $"{VoteSession.Votes.Count}/{VoteSession.PlayerCount} VOTED  /  ROLLS ON DEPARTURE";
         string muted = $"<color=#{Ui.HexOf(Ui.Muted)}>";
         string amber = $"<color=#{Ui.HexOf(Ui.Amber)}>";
-        switch (phase)
+        // Ahead of the phase: a stale winner from the lobby would otherwise read as the next map.
+        if (problem != null)
+        {
+            _chipTitle.text = "NO MAP VOTE";
+            _chipSub.text = $"{muted}{problem.Value.Status}</color>";
+        }
+        else switch (phase)
         {
             case Phase.Open:
                 _chipTitle.text = VoteSession.MyVote is { } mine ? $"YOU PICKED {amber}{MapInfo.DisplayName(mine)}</color>"

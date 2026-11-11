@@ -59,6 +59,15 @@ To install by hand, set up BepInEx, [REPOLib](https://thunderstore.io/c/repo/p/Z
 
 Everyone in the lobby needs the mod. The host runs the vote.
 
+If you can't vote because of the host, the vote list greys out its maps and says why:
+
+| It says | Why | Next map |
+| --- | --- | --- |
+| **HOST DOESN'T HAVE MAPVOTE++** | The host isn't running the mod. | Random |
+| **HOST HAS TURNED THIS VOTE OFF** | The host switched off `VoteInLobbyMenu` or `VoteInTruck`. | Random |
+| **HOST HAS V…, YOU HAVE V…** | Your versions can't talk to each other. | The host's vote, without you |
+| **NO REPLY FROM THE HOST'S VOTE** | The host has the mod, but its vote never reached you, usually because your mod lists differ. See [Compatibility](#compatibility). | The host's vote, without you |
+
 ## Config
 
 `BepInEx/config/RoryDotGG.MapVotePlusPlus.cfg`
@@ -83,6 +92,8 @@ With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) instal
 
 Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately. To load the winner, the host patches `RunManager.SetRunLevel`, and the game's own level sync tells every client which map it is.
 
+The host also puts its MapVote++ version and vote settings in the Photon room's custom properties. Every player gets these on joining, whatever mods they run. That's how a player tells a host without the mod apart from a vote that hasn't reached them yet.
+
 Maps come from `REPOLib.Modules.Levels.AllLevels`. Each `Level` asset supplies the map's name, thumbnail (loading-screen art) and accent colour (fog colour), so custom maps get them too.
 
 The vote list is made of the game's own menu buttons, via MenuLib. It's docked on the lobby page and opens as a popup page in the truck, where the game frees the cursor and holds the player while it's open. The reveal reel and HUD box are drawn in code on an overlay canvas, with procedural sprites and no asset bundle.
@@ -91,6 +102,7 @@ The vote list is made of the game's own menu buttons, via MenuLib. It's docked o
 | --- | --- |
 | [`src/VoteLogic.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/VoteLogic.cs) | Pure vote rules (no Unity), covered by `tests/VoteLogicCheck` |
 | [`src/VoteSession.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/VoteSession.cs) | State, networking, host timers, level override |
+| [`src/HostCheck.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/HostCheck.cs) | Whether the host can run a vote with you, and if not, why |
 | [`src/NativeBoard.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/NativeBoard.cs) | The vote list, as a game menu (MenuLib) |
 | [`src/VoteUi.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/VoteUi.cs) | HUD box, reveal reel, hotkeys |
 | [`src/UiKit.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/UiKit.cs), [`src/MapInfo.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/MapInfo.cs) | Palette, procedural sprites, per-map display data |
@@ -139,7 +151,7 @@ The mock-ups, banner and icon are HTML in [`docs/mockups`](https://github.com/Ro
 
 ## Compatibility
 
-- REPOLib assigns network event codes in registration order, so it's safest when every player runs the same mod list.
+- REPOLib assigns network event codes in registration order, so it's safest when every player runs the same mod list. If they don't match, your vote list may say **NO REPLY FROM THE HOST'S VOTE**.
 - Don't run MapVote++ alongside another map-vote mod. Both patch `RunManager.SetRunLevel`.
 
 ## Licence

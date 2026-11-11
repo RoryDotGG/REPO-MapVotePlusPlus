@@ -286,7 +286,7 @@ internal sealed class NativeBoard : MonoBehaviour
     public void QuickVote(int index)
     {
         if (index >= _rows.Count) return;
-        if (VoteSession.Phase != Phase.Open)
+        if (VoteSession.Phase != Phase.Open || HostCheck.Support != HostSupport.Ok)
         {
             Ui.Click(MenuManager.MenuClickEffectType.Dud);
             return;
@@ -317,25 +317,29 @@ internal sealed class NativeBoard : MonoBehaviour
         if (changed) SyncRows();
 
         var phase = VoteSession.Phase;
-        bool open = phase == Phase.Open;
+        // The host can't run a vote with this player (no MapVote++, a version that can't talk to ours, the vote off):
+        // say so in place of the tally, and grey out every map, rather than leave a vote up that goes nowhere.
+        var problem = HostCheck.Problem;
+        bool open = phase == Phase.Open && problem == null;
         string? winner = VoteUi.Instance ? VoteUi.Instance!.RevealedWinner : VoteSession.Winner;
         string? mine = VoteSession.MyVote;
-        _status.text = Status(phase, winner);
+        _status.text = problem?.Status ?? Status(phase, winner);
 
         // MenuButton paints its text with colorNormal whenever it isn't hovered or pressed.
         foreach (var row in _rows)
         {
-            bool picked = open ? row.Choice == mine : row.Choice == winner;
-            row.Button.menuButton.colorNormal = picked ? Ui.Amber : !open && winner != null ? _normal.WithAlpha(0.45f) : _normal;
+            bool picked = problem == null && (open ? row.Choice == mine : row.Choice == winner);
+            bool faded = problem != null || (!open && winner != null);
+            row.Button.menuButton.colorNormal = picked ? Ui.Amber : faded ? _normal.WithAlpha(0.45f) : _normal;
         }
 
         if (!changed) return;
         _seenRevision = VoteSession.Revision;
 
         // Without this, a short list looks like maps have gone missing, and Random looks like it covers every map.
-        string hint = VoteSession.Shortlisted
+        string hint = problem?.Hint ?? (VoteSession.Shortlisted
             ? $"{VoteSession.Candidates.Count} OF {VoteSession.PoolNames.Count} MAPS, DRAWN AT RANDOM"
-            : "";
+            : "");
         _hint.text = hint;
         if (_hintElement) _hintElement!.visibility = hint.Length > 0;
 
