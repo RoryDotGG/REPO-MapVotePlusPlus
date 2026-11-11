@@ -1,7 +1,8 @@
 <!doctype html>
 <!--
   Mock-up of the reveal reel the moment it lands, over the truck. The reel is VoteUi's overlay canvas, drawn here in
-  its 1920x1080 reference units (scaled to 1280x720); values mirror BuildReveal and AnimateReveal in src/VoteUi.cs.
+  its 1920x1080 reference units (scaled to 1280x720); values mirror BuildReveal, BuildCell and AnimateReveal in
+  src/VoteUi.cs. Each card shows its level's loading-screen art (line-art stand-ins here) under a dark wash.
   The truck's HUD box hides while the reel is up. Not an in-game capture. Render with docs/mockups/render.ps1.
 -->
 <html lang="en">
@@ -29,8 +30,8 @@
     transform: scale(0.666667); transform-origin: 0 0; font-family: Teko, sans-serif;
   }
   .dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72); }
-  /* Body: WindowWidth 1080 x WindowHeight 150, dead centre */
-  .body { position: absolute; left: 420px; top: 465px; width: 1080px; height: 150px; }
+  /* Body: WindowWidth 1080 x WindowHeight 180, dead centre */
+  .body { position: absolute; left: 420px; top: 450px; width: 1080px; height: 180px; }
   .title {
     position: absolute; left: 0; right: 0; top: -68px; height: 36px; text-align: center;
     font: 600 30px/36px Teko, sans-serif; letter-spacing: 0.12em; color: #ffb31a;
@@ -41,14 +42,27 @@
     border-radius: 14px; background: rgba(0, 0, 0, 0.5); filter: blur(10px);
   }
   .frame { position: absolute; inset: -2px; border: 2px solid rgba(255, 179, 26, 0.9); border-radius: 16px; }
-  /* Centre highlight: CellWidth - 10 by WindowHeight - 22, amber at 0.16 once landed */
-  .centre { position: absolute; left: 375px; top: 11px; width: 330px; height: 128px; border-radius: 6px; background: rgba(255, 179, 26, 0.16); }
+  /* Centre glow: the card plus 7 all round, amber at 0.16 once landed */
+  .centre { position: absolute; left: 375px; top: 13px; width: 330px; height: 154px; border-radius: 6px; background: rgba(255, 179, 26, 0.16); }
   .mask { position: absolute; inset: 8px; overflow: hidden; }
-  /* Cells: CellWidth 340 apart, 316x88, auto-sized 24-48 to fit. Landed: neighbours scale 0.88 and fade to half. */
-  .cell {
-    position: absolute; top: 23px; width: 316px; height: 88px; margin-left: -158px;
-    display: flex; align-items: center; justify-content: center;
+  /* Cards: CellWidth 340 apart, 316x140 (CardWidth x CardHeight). Landed: neighbours scale 0.88 and fade to half. */
+  .cell { position: absolute; top: 12px; width: 316px; height: 140px; margin-left: -158px; }
+  /* The level's art, centre-cropped to the card (MapInfo.Crop), on a stand-in scene colour */
+  .art { position: absolute; inset: 0; background-position: center; background-size: cover; background-repeat: no-repeat; }
+  /* Wash: Panel at WashAlpha 0.62, so the name reads over bright art */
+  .wash { position: absolute; inset: 0; background: rgba(13, 13, 16, 0.62); }
+  /* The name, auto-sized 24-48 to fit, 10 in from each side */
+  .name {
+    position: absolute; inset: 0 10px; display: flex; align-items: center; justify-content: center;
     font: 600 48px/1 Teko, sans-serif; color: #f3eee4; white-space: nowrap;
+  }
+  /* The winner's frame, 3 out from its card, amber at 0.75 once the punch has settled */
+  .cell.winner::before { content: ""; position: absolute; inset: -3px; background: rgba(255, 179, 26, 0.75); }
+  .cell.winner .name { color: #ffb31a; }
+  /* The vote line: 66 under the window, 32 tall, 26 with 8 spacing */
+  .votes {
+    position: absolute; left: 0; right: 0; top: 214px; height: 32px; text-align: center;
+    font: 500 26px/32px Teko, sans-serif; letter-spacing: 0.08em; color: #f3eee4;
   }
   .fade { position: absolute; top: 8px; bottom: 8px; width: 220px; }
   .fade.l { left: 8px; background: linear-gradient(to right, #0d0d10, rgba(13, 13, 16, 0)); }
@@ -73,23 +87,33 @@
       <div class="frame"></div>
       <div class="centre"></div>
       <div class="mask">
-        <!-- x relative to the mask centre (532): -340, 0, +340 -->
-        <div class="cell" style="left:192px;transform:scale(0.88);opacity:0.5">HEADMAN MANOR</div>
-        <div class="cell" style="left:532px;color:#ffb31a">SWIFTBROOM ACADEMY</div>
-        <div class="cell" style="left:872px;transform:scale(0.88);opacity:0.5">MUSEUM OF HUMAN ART</div>
+        <!-- x relative to the mask centre (532): -340, 0, +340. Scene colours are the lobby mock-up's map colours. -->
+        <div class="cell" style="left:192px;transform:scale(0.88);opacity:0.5">
+          <div class="art" style="background-image:url('art/manor.svg'),linear-gradient(#3b2d5e,#1a1428)"></div>
+          <div class="wash"></div><div class="name">HEADMAN MANOR</div>
+        </div>
+        <div class="cell winner" style="left:532px">
+          <div class="art" style="background-image:url('art/academy.svg'),linear-gradient(#2b5577,#121e2a)"></div>
+          <div class="wash"></div><div class="name">SWIFTBROOM ACADEMY</div>
+        </div>
+        <div class="cell" style="left:872px;transform:scale(0.88);opacity:0.5">
+          <div class="art" style="background-image:url('art/museum.svg'),linear-gradient(#6b5c27,#231e10)"></div>
+          <div class="wash"></div><div class="name">MUSEUM OF HUMAN ART</div>
+        </div>
       </div>
       <div class="fade l"></div>
       <div class="fade r"></div>
       <div class="marker" style="top:-17px"></div>
       <div class="marker" style="bottom:-17px"></div>
     </div>
+    <div class="votes">3 OF 4 VOTES</div>
   </div>
 </div>
 <div class="tag">Mock-up drawn from VoteUi.cs layout values (not an in-game capture)</div>
 <script>
-  // TMP auto-size: shrink each name until it fits its 316-unit cell (24 minimum).
+  // TMP auto-size: shrink each name until it fits its card, 10 in from each side (24 minimum).
   document.fonts.ready.then(() => {
-    for (const cell of document.querySelectorAll('.cell')) {
+    for (const cell of document.querySelectorAll('.name')) {
       let size = 48;
       while (cell.scrollWidth > cell.clientWidth && size > 24) cell.style.fontSize = `${--size}px`;
     }

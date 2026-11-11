@@ -10,14 +10,21 @@ namespace MapVote;
 /// <summary>
 /// The overlay pieces, built in code on one canvas. The vote list itself is a game menu: see <see cref="NativeBoard"/>.
 ///  - Chip: a small HUD pill in the truck that says what is going on and which key opens the vote.
-///  - Reveal: a slot-machine reel that lands on the winner for everyone at the same time.
+///  - Reveal: a slot-machine reel of map cards that lands on the winner for everyone at the same time, then says how
+///    it won.
 /// Also routes the keyboard: the toggle key opens the truck vote, and 1-9 / R vote on whichever board has focus.
 /// And opens the truck vote by itself on arrival (ShowVoteOnArrival), so each player picks a map or skips first.
 /// </summary>
 internal sealed class VoteUi : MonoBehaviour
 {
     private const float CellWidth = 340f, SpinSeconds = 3.3f, HoldSeconds = 2.8f;
-    private const float WindowWidth = 1080f, WindowHeight = 150f;
+    private const float WindowWidth = 1080f, WindowHeight = 180f;
+    /// <summary>Each map's card on the reel: its art with its name over it, with a gap to the next card.</summary>
+    private const float CardWidth = CellWidth - 24f, CardHeight = WindowHeight - 40f;
+    /// <summary>How dark the wash over each card's art is, so the name on it stays readable over bright art.</summary>
+    private const float WashAlpha = 0.62f;
+    /// <summary>Where the vote line sits under the window, mirroring the title above it.</summary>
+    private const float VotesY = -66f;
     /// <summary>How long after arriving in the truck the vote opens by itself, so the player sees where they are first.</summary>
     private const float PromptDelay = 1f;
 
@@ -35,12 +42,21 @@ internal sealed class VoteUi : MonoBehaviour
     private RectTransform _reveal = null!, _revealBody = null!, _window = null!, _reel = null!;
     private CanvasGroup _revealGroup = null!;
     private Image _revealCenter = null!;
-    private TextMeshProUGUI _revealTitle = null!;
-    private readonly List<TextMeshProUGUI> _cells = new();
+    private TextMeshProUGUI _revealTitle = null!, _revealVotes = null!;
+    private readonly List<ReelCell> _cells = new();
+    private Image? _winnerFrame;
     private string? _reelFor;
     private int _reelWinner, _lastTickCell;
-    private float _reelStart = -999f, _punch;
+    private float _reelStart = -999f, _punch, _votesT;
     private bool _landed;
+
+    /// <summary>One card on the reel. Its group fades the art and the name together.</summary>
+    private sealed class ReelCell
+    {
+        public RectTransform Rect = null!;
+        public CanvasGroup Group = null!;
+        public TextMeshProUGUI Name = null!;
+    }
 
     private VoteContext _context, _lastContext;
     private int _seenRevision = -1;
@@ -233,25 +249,92 @@ internal sealed class VoteUi : MonoBehaviour
         if (weighted.Count == 0) weighted = candidates.ToList();
         const int cellCount = 34;
         _reelWinner = cellCount - 4;
-        foreach (var c in _cells) Destroy(c.gameObject);
+        foreach (var c in _cells) Destroy(c.Rect.gameObject);
         _cells.Clear();
         string? prev = null;
         for (int i = 0; i < cellCount; i++)
         {
             string name = i == _reelWinner ? winner : PickWeighted(weighted, odds, prev);
             prev = name;
-            var cell = Ui.Label("Cell", _reel, 48f, Ui.Text, TextAlignmentOptions.Center);
-            cell.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 24f, 88f));
-            cell.text = MapInfo.DisplayName(name);
-            cell.enableAutoSizing = true;
-            cell.fontSizeMin = 24f;
-            cell.fontSizeMax = 48f;
-            _cells.Add(cell);
+            _cells.Add(BuildCell(name, i == _reelWinner));
         }
         _revealTitle.text = "NEXT MAP";
         _revealTitle.color = Ui.Muted;
+        // Counted once, here: the ballots are frozen while the reel spins.
+        _revealVotes.text = VoteLine(winner, candidates);
+        _votesT = 0f;
         Ui.Sound(m => m.MenuEffectPopUpOpen());
     }
+
+    /// <summary>A map's card: its art under a dark wash, its name on top. The winner's has a frame that lights when it lands.</summary>
+    private ReelCell BuildCell(string name, bool winner)
+    {
+        var rect = Ui.Rect("Cell", _reel).Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CardWidth, CardHeight));
+        if (winner)
+        {
+            _winnerFrame = Ui.Image("Frame", rect, Ui.Amber.WithAlpha(0f));
+            _winnerFrame.rectTransform.Fill(-3, -3, -3, -3);
+        }
+        CardArt(rect, name);
+        Ui.Image("Wash", rect, Ui.Panel.WithAlpha(WashAlpha)).rectTransform.Fill();
+
+        var label = Ui.Label("Name", rect, 48f, Ui.Text, TextAlignmentOptions.Center);
+        label.rectTransform.Fill(10, 0, 10, 0);
+        label.text = MapInfo.DisplayName(name);
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 24f;
+        label.fontSizeMax = 48f;
+        return new ReelCell { Rect = rect, Group = rect.gameObject.AddComponent<CanvasGroup>(), Name = label };
+    }
+
+    /// <summary>
+    /// The level's loading-screen art, as on the vote list: its initial on its colour when it has none, and a "?" for
+    /// Random or for a map this client doesn't have.
+    /// </summary>
+    private static void CardArt(RectTransform card, string name)
+    {
+        var image = Ui.Rect("Art", card).Fill().gameObject.AddComponent<RawImage>();
+        image.raycastTarget = false;
+        // Random isn't a level, so it takes the "?" too.
+        var info = VoteSession.TryGetPoolLevel(name, out var level) ? MapInfo.Get(level) : null;
+        if (info?.Art)
+        {
+            image.texture = info!.Art;
+            image.uvRect = MapInfo.Crop(info.ArtUv, info.Art!, CardWidth / CardHeight);
+            return;
+        }
+
+        image.color = info != null ? Color.Lerp(Ui.Ink, info.Color, 0.55f) : Ui.Amber.WithAlpha(0.22f);
+        var mark = Ui.Label("Mark", image.rectTransform, CardHeight * 0.8f, info != null ? Ui.Ink.WithAlpha(0.75f) : Ui.Amber,
+            TextAlignmentOptions.Center, FontStyles.Normal);
+        mark.rectTransform.Fill();
+        mark.text = info == null ? "?" : info.Name.Length > 0 ? info.Name.Substring(0, 1) : "?";
+    }
+
+    /// <summary>
+    /// How the winner won, from the ballots: "3 OF 4 VOTES", or the Random ballots it came through, or nobody voting.
+    /// It states the count and nothing about how the winner was drawn, so it reads right whatever the vote rules are.
+    /// </summary>
+    private static string VoteLine(string winner, IReadOnlyList<string> candidates)
+    {
+        int total = 0, forWinner = 0, forRandom = 0;
+        foreach (var ballot in VoteSession.Votes.Values)
+        {
+            if (ballot == winner) forWinner++;
+            else if (ballot == VoteLogic.RandomChoice) forRandom++;
+            else if (!candidates.Contains(ballot)) continue; // a ballot for a map that isn't up counts for nothing
+            total++;
+        }
+
+        if (total == 0) return "NOBODY VOTED  /  RANDOM MAP";
+        if (forWinner == 0 && forRandom > 0)
+            return total == 1 ? "THE ONLY VOTE WAS RANDOM" : $"{Tally(forRandom, total)} FOR RANDOM";
+        return Tally(forWinner, total);
+    }
+
+    private static string Tally(int votes, int total) =>
+        votes != total ? $"{votes} OF {total} {(total == 1 ? "VOTE" : "VOTES")}"
+        : total == 1 ? "THE ONLY VOTE" : $"ALL {total} VOTES";
 
     private static string PickWeighted(List<string> names, Dictionary<string, float> odds, string? avoid)
     {
@@ -305,18 +388,27 @@ internal sealed class VoteUi : MonoBehaviour
             var cell = _cells[i];
             float x = i * CellWidth - offset;
             bool near = Mathf.Abs(x) < CellWidth * 2.6f;
-            if (cell.gameObject.activeSelf != near) cell.gameObject.SetActive(near);
+            var go = cell.Rect.gameObject;
+            if (go.activeSelf != near) go.SetActive(near);
             if (!near) continue;
+            // The whole card, art and name, shrinks and fades away from the centre.
             float d = Mathf.Clamp01(Mathf.Abs(x) / (CellWidth * 1.7f));
-            cell.rectTransform.anchoredPosition = new Vector2(x, 0);
-            cell.rectTransform.localScale = Vector3.one * (1f - 0.2f * d + (i == _reelWinner ? _punch * 0.12f : 0f));
-            var colour = _landed && i == _reelWinner ? Ui.Amber : Ui.Text;
-            cell.color = colour.WithAlpha(1f - d * 0.85f);
+            cell.Rect.anchoredPosition = new Vector2(x, 0);
+            cell.Rect.localScale = Vector3.one * (1f - 0.2f * d + (i == _reelWinner ? _punch * 0.12f : 0f));
+            cell.Group.alpha = 1f - d * 0.85f;
+            cell.Name.color = _landed && i == _reelWinner ? Ui.Amber : Ui.Text;
         }
 
         _punch = Ui.Damp(_punch, 0f, 6f);
         _window.localScale = Vector3.one * (1f + _punch * 0.05f);
         _revealCenter.color = Ui.Amber.WithAlpha(_landed ? 0.16f + _punch * 0.3f : 0.07f);
+        // The winner's frame flares with the punch and stays lit.
+        if (_winnerFrame) _winnerFrame!.color = Ui.Amber.WithAlpha(_landed ? 0.75f + 0.25f * _punch : 0f);
+
+        // How it won rises into place under the winner once it lands.
+        _votesT = Ui.Damp(_votesT, _landed ? 1f : 0f, 8f);
+        _revealVotes.color = Ui.Text.WithAlpha(_votesT);
+        _revealVotes.rectTransform.anchoredPosition = new Vector2(0f, VotesY - (1f - _votesT) * 12f);
     }
 
     // ---- layout --------------------------------------------------------------------------
@@ -385,19 +477,23 @@ internal sealed class VoteUi : MonoBehaviour
         _revealTitle = Ui.Label("Title", _revealBody, 30f, Ui.Muted, TextAlignmentOptions.Center);
         _revealTitle.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, 68), new Vector2(WindowWidth, 36));
         _revealTitle.characterSpacing = 12f;
+        _revealVotes = Ui.Label("Votes", _revealBody, 26f, Ui.Text.WithAlpha(0f), TextAlignmentOptions.Center);
+        _revealVotes.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, VotesY), new Vector2(WindowWidth, 32));
+        _revealVotes.characterSpacing = 8f;
 
         _window = Ui.Rect("Window", _revealBody).Fill();
         Shadow(_window, 24f);
         Ui.Image("Frame", _window, Ui.Amber.WithAlpha(0.9f), Ui.Rounded).rectTransform.Fill(-2, -2, -2, -2);
         Ui.Image("Bg", _window, Ui.Panel, Ui.Rounded).rectTransform.Fill();
+        // A glow round the centre card, under the reel.
         _revealCenter = Ui.Image("Centre", _window, Ui.Amber.WithAlpha(0.07f), Ui.RoundedSmall);
-        _revealCenter.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CellWidth - 10f, WindowHeight - 22f));
+        _revealCenter.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CardWidth + 14f, CardHeight + 14f));
 
         var mask = Ui.Rect("Mask", _window).Fill(8, 8, 8, 8);
         mask.gameObject.AddComponent<RectMask2D>();
         _reel = Ui.Rect("Reel", mask).Place(new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        // Edge fades so names slide in and out instead of being cut.
+        // Edge fades so cards slide in and out instead of being cut.
         var leftFade = Ui.Image("FadeL", _window, Ui.Panel, Ui.FadeRight).rectTransform;
         leftFade.Place(new Vector2(0, 0.5f), new Vector2(8, 0), new Vector2(220, WindowHeight - 16f));
         leftFade.localScale = new Vector3(-1, 1, 1);
