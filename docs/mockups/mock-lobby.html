@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
-  Mock-up of the lobby vote panel, drawn from NativeBoard.cs layout values in the game's 720x405 menu space
-  (scaled to 1280x720). Not an in-game capture. Render with docs/mockups/render.ps1.
+  Mock-up of the lobby vote panel with a 20-map custom pack, drawn from NativeBoard.cs layout values in the game's
+  720x405 menu space (scaled to 1280x720). Not an in-game capture. Render with docs/mockups/render.ps1.
 -->
 <html lang="en">
 <head>
@@ -56,22 +56,30 @@
   <div class="button" style="left:148px;top:339px">SETTINGS</div>
   <div class="button" style="left:238px;top:341px">START GAME</div>
 
-  <!-- NativeBoard.BuildLobby: LobbyLeft 380, LobbyTop 310 (from the bottom), width 310, header 62, pitch 24 -->
-  <div class="vote" style="left:380px;top:95px;width:310px;height:216px">
+  <!-- NativeBoard.BuildLobby with a 20-map pack: LobbyLeft 380, LobbyTop 310 (from the bottom), width 310, header 62.
+       Random and the first nine maps (LobbyRows 10) share the 215 units under the header, so the pitch is 21.5;
+       the other eleven maps scroll, and the bar in the right margin shows 10 of 21 rows from the top.
+       Votes: Sam for Random, Rory and Jess for Swiftbroom, no previous map, so 2/3 + 1/60 = 68% and 1/60 = 2%. -->
+  <div class="vote" style="left:380px;top:95px;width:310px;height:287px">
     <div class="vote-title">MAP VOTE</div>
     <div class="vote-status">3/4 VOTED&nbsp;&nbsp;&nbsp;ROLLS WHEN THE HOST STARTS</div>
     <div class="vote-line"></div>
-    <div class="rows" style="top:62px">
+    <div class="rows" style="--p:21.5px;top:62px">
       <div class="row"><i style="background:#ffb31a"></i><span class="thumb random">?</span><b>RANDOM</b><em><span style="color:#4fd1c5">SAM</span></em><s>1</s><u></u></div>
-      <div class="row"><i style="background:#6a4bb5"></i><span class="thumb art-manor"></span><b>HEADMAN MANOR</b><em></em><s></s><u>7%</u></div>
-      <div class="row picked"><i style="background:#3f7fb0"></i><span class="thumb art-academy"></span><b>SWIFTBROOM ACADEMY</b><em><span style="color:#ffb31a">RORY</span> <span style="color:#f56565">JESS</span></em><s>2</s><u>73%</u></div>
-      <div class="row hover"><i style="background:#4e9aa6"></i><span class="thumb art-station"></span><b>MCJANNEK STATION</b><em></em><s></s><u>7%</u></div>
-      <div class="row"><i style="background:#a08a3c"></i><span class="thumb art-museum"></span><b>MUSEUM OF HUMAN ART</b><em></em><s></s><u>7%</u></div>
-      <div class="row"><i style="background:#2f8f62"></i><span class="thumb art-mall"></span><b>THE SUNKEN MALL</b><em></em><s></s><u>7%</u></div>
+      <div class="row"><i style="background:#6a4bb5"></i><span class="thumb art-manor"></span><b>HEADMAN MANOR</b><em></em><s></s><u>2%</u></div>
+      <div class="row picked"><i style="background:#3f7fb0"></i><span class="thumb art-academy"></span><b>SWIFTBROOM ACADEMY</b><em><span style="color:#ffb31a">RORY</span> <span style="color:#f56565">JESS</span></em><s>2</s><u>68%</u></div>
+      <div class="row hover"><i style="background:#4e9aa6"></i><span class="thumb art-station"></span><b>MCJANNEK STATION</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#a08a3c"></i><span class="thumb art-museum"></span><b>MUSEUM OF HUMAN ART</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#2f8f62"></i><span class="thumb art-mall"></span><b>THE SUNKEN MALL</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#5fb8e6"></i><span class="thumb initial" style="background:#3d6e88">C</span><b>COLD STORAGE</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#3fbfa8"></i><span class="thumb initial" style="background:#2c7265">H</span><b>HARBOUR DOCKS</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#8a6be0"></i><span class="thumb initial" style="background:#554484">O</span><b>OLD OBSERVATORY</b><em></em><s></s><u>2%</u></div>
+      <div class="row"><i style="background:#e08a4a"></i><span class="thumb initial" style="background:#845532">P</span><b>PUMP HOUSE</b><em></em><s></s><u>2%</u></div>
     </div>
+    <div class="vote-scroll" style="top:62px;height:215px"><div style="top:0;height:102.4px"></div></div>
   </div>
 
-  <svg class="cursor" style="left:534px;top:244px" viewBox="0 0 50 48"><polygon points="0,0 50,21 23,29 16,48"/></svg>
+  <svg class="cursor" style="left:534px;top:234px" viewBox="0 0 50 48"><polygon points="0,0 50,21 23,29 16,48"/></svg>
 </div>
 <div class="tag">Mock-up drawn from NativeBoard.cs layout values (not an in-game capture)</div>
 </body>
