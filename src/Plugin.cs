@@ -25,6 +25,7 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<bool> VoteInTruck = null!;
     internal static ConfigEntry<bool> ShowVoteOnArrival = null!;
     internal static ConfigEntry<string> MapsPerVote = null!;
+    internal static ConfigEntry<VoteMode> Mode = null!;
 
     /// <summary>MapsPerVote as a number, or 0 when it offers every map.</summary>
     internal static int MapLimit => int.TryParse(MapsPerVote.Value, out var n) ? n : 0;
@@ -43,9 +44,12 @@ public class Plugin : BaseUnityPlugin
         MapsPerVote = Config.Bind("Voting", "MapsPerVote", "All",
             new ConfigDescription("How many maps each vote offers. Every time a vote opens, this many are drawn at random, never including the map you just played, and Random only lands on one of them. All offers every map. The host's value is used, and changing it mid-vote draws the list again.",
                 new AcceptableValueList<string>(mapChoices)));
+        Mode = Config.Bind("Voting", "VoteMode", VoteMode.Lottery,
+            "How the votes pick the next map. Lottery: each vote is a ticket in a draw, so 3 votes to 1 is a 75% chance. Majority: the map with the most votes wins, and a tie is drawn at random between the tied maps. A vote for Random counts as a choice of its own: if it wins, the map is random. The host's value is used.");
 
         // REPOConfig changes settings mid-game, so apply them to the vote that is open now, not just the next one.
         MapsPerVote.SettingChanged += (_, _) => VoteSession.Redraw();
+        Mode.SettingChanged += (_, _) => VoteSession.RulesChanged();
         VoteInLobbyMenu.SettingChanged += (_, _) => VoteSession.CloseIfSwitchedOff();
         VoteInTruck.SettingChanged += (_, _) => VoteSession.CloseIfSwitchedOff();
 

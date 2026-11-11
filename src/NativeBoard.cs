@@ -447,9 +447,9 @@ internal sealed class NativeBoard : MonoBehaviour
         _hint.text = hint;
         if (_hintElement) _hintElement!.visibility = hint.Length > 0;
 
-        // Each vote is a lottery ticket, so the maps' chances show how far ahead the leader really is. Random's own row
-        // stays blank: its tickets are already spread across the maps' chances, and its share would push the column
-        // past 100%.
+        // The maps' chances, under the host's VoteMode, show how far ahead the leader really is. Random's own row stays
+        // blank: its share is already spread across the maps' chances, and showing it too would push the column past
+        // 100%.
         var odds = problem == null ? CurrentOdds() : null;
         foreach (var row in _rows)
         {
@@ -466,13 +466,12 @@ internal sealed class NativeBoard : MonoBehaviour
     /// <summary>
     /// Each map's chance of winning as the votes stand, or null until a vote counts: with none, the roll is an even
     /// draw over every map, and the same share on every row tells players nothing. Called only when the vote changes.
-    /// The list's only call to <see cref="VoteLogic.Odds"/>, so a change to its rules is a change here.
+    /// <see cref="VoteSession.Odds"/> applies the host's rules, so these match the reveal and the host's draw.
     /// </summary>
     private static Dictionary<string, float>? CurrentOdds()
     {
-        var candidates = VoteSession.Candidates;
-        if (VoteLogic.ValidBallots(candidates, VoteSession.Votes.Values).Count == 0) return null;
-        return VoteLogic.Odds(candidates, VoteSession.Votes.Values, VoteSession.PreviousLevel);
+        if (VoteLogic.ValidBallots(VoteSession.Candidates, VoteSession.Votes.Values).Count == 0) return null;
+        return VoteSession.Odds();
     }
 
     /// <summary>

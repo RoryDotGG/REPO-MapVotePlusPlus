@@ -4,11 +4,20 @@ using System.Linq;
 
 namespace MapVote;
 
+/// <summary>How the ballots pick the next map. The host's setting, sent to players with the vote.</summary>
+public enum VoteMode
+{
+    /// <summary>Every ballot is one ticket in a draw, so 3 votes to 1 is 75/25.</summary>
+    Lottery,
+    /// <summary>The choice with the most ballots wins. A tie is drawn at random between the tied choices.</summary>
+    Majority,
+}
+
 /// <summary>
 /// Pure vote resolution. No Unity types so it can be checked outside the game.
-/// Every ballot is one lottery ticket: nobody votes means a uniform random map,
-/// otherwise the winner is drawn only from what people actually picked.
-/// A "Random" ballot is a ticket that resolves to any map in the pool.
+/// Nobody voting means a uniform random map. Otherwise the winner comes only from what people actually picked,
+/// as <see cref="VoteMode"/> says. A "Random" ballot resolves to any map in the pool: in a lottery it is one ticket,
+/// and in a majority vote it is a choice of its own, which can win or tie like a map.
 /// </summary>
 public static class VoteLogic
 {
@@ -45,42 +54,57 @@ public static class VoteLogic
         ballots.Where(b => b == RandomChoice || pool.Contains(b)).ToList();
 
     /// <summary>
-    /// Probability of each map winning, plus the share of tickets held by Random.
+    /// The tickets the winner is drawn from, one of which is picked at random. In a lottery that is every valid ballot.
+    /// In a majority vote it is one ticket for each choice tied for the most ballots, so a clear leader always wins.
+    /// </summary>
+    private static List<string> Tickets(List<string> valid, VoteMode mode)
+    {
+        if (mode != VoteMode.Majority || valid.Count == 0) return valid;
+        // GroupBy keeps the order choices were first voted for, so the same ballots always give the same tickets.
+        var tallies = valid.GroupBy(b => b).Select(g => (Choice: g.Key, Votes: g.Count())).ToList();
+        int most = tallies.Max(t => t.Votes);
+        return tallies.Where(t => t.Votes == most).Select(t => t.Choice).ToList();
+    }
+
+    /// <summary>
+    /// Probability of each map winning under <paramref name="mode"/>, plus the chance the winner comes from Random.
     /// Values for maps sum to 1 (given a non-empty pool).
     /// </summary>
-    public static Dictionary<string, float> Odds(IReadOnlyList<string> pool, IEnumerable<string> ballots, string? previous)
+    public static Dictionary<string, float> Odds(IReadOnlyList<string> pool, IEnumerable<string> ballots, string? previous,
+        VoteMode mode)
     {
         var odds = pool.ToDictionary(p => p, _ => 0f);
         if (pool.Count == 0) return odds;
 
-        var valid = ValidBallots(pool, ballots);
+        var tickets = Tickets(ValidBallots(pool, ballots), mode);
         var randomPool = RandomPool(pool, previous);
-        if (valid.Count == 0)
+        if (tickets.Count == 0)
         {
             foreach (var map in randomPool) odds[map] = 1f / randomPool.Count;
             odds[RandomChoice] = 1f;
             return odds;
         }
 
-        float ticket = 1f / valid.Count;
+        float ticket = 1f / tickets.Count;
         int randomTickets = 0;
-        foreach (var ballot in valid)
+        foreach (var choice in tickets)
         {
-            if (ballot == RandomChoice) randomTickets++;
-            else odds[ballot] += ticket;
+            if (choice == RandomChoice) randomTickets++;
+            else odds[choice] += ticket;
         }
         foreach (var map in randomPool) odds[map] += randomTickets * ticket / randomPool.Count;
         odds[RandomChoice] = randomTickets * ticket;
         return odds;
     }
 
-    /// <summary>Draws the winning map. Returns null only for an empty pool.</summary>
-    public static string? Resolve(IReadOnlyList<string> pool, IEnumerable<string> ballots, string? previous, Random rng)
+    /// <summary>Draws the winning map under <paramref name="mode"/>. Returns null only for an empty pool.</summary>
+    public static string? Resolve(IReadOnlyList<string> pool, IEnumerable<string> ballots, string? previous, VoteMode mode,
+        Random rng)
     {
         if (pool.Count == 0) return null;
 
-        var valid = ValidBallots(pool, ballots);
-        var ticket = valid.Count == 0 ? RandomChoice : valid[rng.Next(valid.Count)];
+        var tickets = Tickets(ValidBallots(pool, ballots), mode);
+        var ticket = tickets.Count == 0 ? RandomChoice : tickets[rng.Next(tickets.Count)];
         if (ticket != RandomChoice) return ticket;
 
         var randomPool = RandomPool(pool, previous);

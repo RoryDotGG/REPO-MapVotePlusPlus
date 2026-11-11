@@ -33,6 +33,9 @@ internal static class VoteSession
     private static bool _lastIsHost;
     private static System.Action? _afterReveal;
     private static readonly System.Random Rng = new();
+    // The host's rules for the vote that is up. The host sets them when the vote opens, and again if it changes a
+    // setting while the vote is open, so they don't change under the reveal. Players get them with the vote.
+    private static VoteMode _mode;
 
     // The pool is read every frame while a vote list is on screen, so it is built once and kept until AllLevels changes.
     // PoolSource is AllLevels as it was at the last build, destroyed and null entries included, to compare against.
@@ -86,6 +89,20 @@ internal static class VoteSession
     public static IReadOnlyList<string> Candidates => _candidates.Count > 0 ? _candidates : PoolNames;
     public static string? PreviousLevel => RunManager.instance && RunManager.instance.previousRunLevel
         ? RunManager.instance.previousRunLevel.name : null;
+
+    /// <summary>
+    /// How the ballots pick the winner (the host's VoteMode). Lottery until the host's vote reaches us, and from a host
+    /// older than VoteMode, which only had the lottery.
+    /// </summary>
+    public static VoteMode Mode => _mode;
+
+    /// <summary>
+    /// Each map's chance of winning this vote, plus Random's share, under the host's rules. Use this rather than
+    /// <see cref="VoteLogic.Odds"/>, so the odds players see always follow the rules the host draws with.
+    /// </summary>
+    public static Dictionary<string, float> Odds() => VoteLogic.Odds(Candidates, Votes.Values, PreviousLevel, Mode);
+
+    private static string? Resolve() => VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Mode, Rng);
 
     /// <summary>
     /// Rebuilds the cached pool if AllLevels has changed since the last build: a level added or removed (custom maps
@@ -249,6 +266,9 @@ internal static class VoteSession
         for (int i = 0; i < actors.Length && i < choices.Length; i++) Votes[actors[i]] = choices[i];
         Winner = (string)data[4] is { Length: > 0 } w ? w : null;
         _candidates = data.Length > 5 && data[5] is string[] candidates ? candidates.ToList() : new List<string>();
+        // Fields after the list came after 1.1.0, which doesn't read them. A host without them only has the lottery.
+        _mode = data.Length > 6 && data[6] is int mode && System.Enum.IsDefined(typeof(VoteMode), mode)
+            ? (VoteMode)mode : VoteMode.Lottery;
         Revision++;
     }
 
@@ -264,6 +284,8 @@ internal static class VoteSession
         var payload = new object[]
         {
             (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "", _candidates.ToArray(),
+            // New fields go on the end: older versions read the ones above by position and ignore the rest.
+            (int)_mode,
         };
         _state.RaiseEvent(payload, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
     }
@@ -280,8 +302,15 @@ internal static class VoteSession
 
     private static void Draw()
     {
+        TakeRules();
         _candidates = VoteLogic.Shortlist(PoolNames, PreviousLevel, Plugin.MapLimit, Rng);
         if (Shortlisted) Plugin.Log.LogInfo($"Vote is on {_candidates.Count} map(s): {string.Join(", ", _candidates)}");
+    }
+
+    /// <summary>The host: read its settings into the vote's rules, which go to players with the vote.</summary>
+    private static void TakeRules()
+    {
+        _mode = Plugin.Mode.Value;
     }
 
     /// <summary>
@@ -294,6 +323,17 @@ internal static class VoteSession
         Draw();
         foreach (var actor in Votes.Where(v => v.Value != VoteLogic.RandomChoice && !_candidates.Contains(v.Value)).Select(v => v.Key).ToList())
             Votes.Remove(actor);
+        Broadcast();
+    }
+
+    /// <summary>
+    /// The host changed VoteMode mid-game (REPOConfig): the open vote follows it now, and every player's odds with it.
+    /// Once the vote has rolled, the winner stands and the change waits for the next vote.
+    /// </summary>
+    public static void RulesChanged()
+    {
+        if (!IsHost || Phase != Phase.Open) return;
+        TakeRules();
         Broadcast();
     }
 
@@ -316,7 +356,7 @@ internal static class VoteSession
 
     private static void BeginReveal()
     {
-        Winner = VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng);
+        Winner = Resolve();
         Phase = Phase.Revealing;
         _deadline = Time.unscaledTime + RevealSeconds;
         Plugin.Log.LogInfo($"Vote closed with {Votes.Count} ballot(s); next map: {Winner}");
@@ -343,6 +383,7 @@ internal static class VoteSession
         _deadline = -1f;
         _afterReveal = null;
         _candidates = new List<string>();
+        _mode = VoteMode.Lottery;
         Revision++;
     }
 
@@ -390,7 +431,7 @@ internal static class VoteSession
         string? name = Phase switch
         {
             Phase.Locked or Phase.Revealing => Winner,
-            Phase.Open when Votes.Count > 0 || Shortlisted => VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Rng),
+            Phase.Open when Votes.Count > 0 || Shortlisted => Resolve(),
             _ => null,
         };
         if (Phase == Phase.Closed && name == null) return null;
