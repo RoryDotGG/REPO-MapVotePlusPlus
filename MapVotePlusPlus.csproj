@@ -4,7 +4,7 @@
     <AssemblyName>MapVotePlusPlus</AssemblyName>
     <RootNamespace>MapVote</RootNamespace>
     <!-- The only place to bump the version. The build writes it into Plugin.Version and the packaged manifest.json. -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Rory Durrant</Authors>
     <RepositoryUrl>https://github.com/RoryDotGG/REPO-MapVotePlusPlus</RepositoryUrl>
     <LangVersion>latest</LangVersion>

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+- The host can choose how the votes pick the next map with the new `VoteMode` setting. **Lottery** works as before: each vote is a ticket, so 3 votes to 1 is a 75% chance. With **Majority**, the map with the most votes wins, and a tie is drawn at random between the tied maps.
+- The new `RecentMapsToSkip` setting keeps the last few maps played this run out of Random, out of the pick when nobody votes, and out of the maps `MapsPerVote` draws. The default of 1 skips only the map you just played, as before.
+- The new `ExcludedMaps` setting leaves maps out of the vote and out of random draws altogether, for example to drop a level you don't like from a custom map pack. Name each map as the vote list shows it or by its level name.
+- Once someone has voted, each map's row shows its chance of winning, so you can see how far ahead the leader really is.
+- A long map list in the lobby now scrolls instead of shrinking. Up to ten rows show at once, and the mouse wheel moves the list.
+- The reveal reel shows each map's art behind its name, and says how the winner won when it lands, for example **3 OF 4 VOTES**.
+- The truck vote no longer has a countdown, and the `VoteSeconds` setting is gone. The vote stays open until someone sends the truck off, and then the reveal plays.
+- When you arrive in the truck, the vote opens by itself so you can pick a map or skip. Turn off `ShowVoteOnArrival` to open it yourself with **M** instead.
+- If the host doesn't have MapVote++, has switched the vote off, or runs a version that can't talk to yours, the vote list now says so instead of waiting for the host forever.
+- The vote list does less work every frame.
+- Players and hosts on 1.1.0 can still vote together with 1.2.0.
+
 ## 1.1.0
 
 - The host can limit how many maps each vote offers with the new `MapsPerVote` setting. Each vote draws that many maps at random, never the one you just played, and the list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**. Random, and the pick when nobody votes, only land on one of those maps.
