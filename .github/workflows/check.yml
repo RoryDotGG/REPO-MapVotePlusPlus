@@ -1,0 +1,59 @@
+# Runs the vote-rule check and builds the package on every pull request and every push to main.
+# It only builds: nothing is published or uploaded.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Read the MenuLib version
+        id: menulib
+        run: |
+          version=$(sed -n 's:.*<MenuLibVersion>\(.*\)</MenuLibVersion>.*:\1:p' MapVotePlusPlus.csproj)
+          if [ -z "$version" ]; then
+            echo "::error::No MenuLibVersion in MapVotePlusPlus.csproj"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The build downloads MenuLib from Thunderstore into obj/thunderstore when it isn't there already.
+      - name: Cache MenuLib
+        uses: actions/cache@v6
+        with:
+          path: obj/thunderstore
+          key: menulib-${{ steps.menulib.outputs.version }}
+
+      - name: Check the vote rules
+        run: dotnet run --project tests/VoteLogicCheck
+
+      - name: Build
+        run: dotnet build -c Release
+
+      # Fails if the versions in MapVotePlusPlus.csproj, manifest.json and src/Plugin.cs don't match.
+      - name: Build the package
+        run: dotnet build -c Release -t:ThunderstorePackage
