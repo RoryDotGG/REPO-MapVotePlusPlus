@@ -442,7 +442,7 @@ internal sealed class NativeBoard : MonoBehaviour
 
         // Without this, a short list looks like maps have gone missing, and Random looks like it covers every map.
         string hint = problem?.Hint ?? (VoteSession.Shortlisted
-            ? $"{VoteSession.Candidates.Count} OF {VoteSession.PoolNames.Count} MAPS, DRAWN AT RANDOM"
+            ? $"{VoteSession.Candidates.Count} OF {VoteSession.MapsAllowed} MAPS, DRAWN AT RANDOM"
             : "");
         _hint.text = hint;
         if (_hintElement) _hintElement!.visibility = hint.Length > 0;

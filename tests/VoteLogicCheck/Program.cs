@@ -135,6 +135,58 @@ Check(DrawsLikeGame(["B", "C", "D"], ["A"], pool, "A"), "game pick: every map bu
 Check(DrawsLikeGame(pool, ["A", "ZZZ"], pool, "A"), "game pick: recent maps no longer in the pool don't count");
 Check(DrawsLikeGame(["A", "B"], ["A", "B"], ["A", "B"], "A"), "game pick: two maps, both recent, comes to the same");
 
+// ---- excluded maps ----
+
+// The setting is a comma-separated list, trimmed, matched in any case.
+var listed = NameList(" Level - Manor , headman manor,, ,Museum ");
+Check(listed.Count == 3 && listed.Contains("LEVEL - MANOR") && listed.Contains("museum"), "excluded: a comma-separated list, trimmed, any case");
+Check(NameList("").Count == 0 && NameList(" , ").Count == 0 && NameList(null).Count == 0, "excluded: an empty list names nothing");
+
+// A map is excluded by its level name or by the name the vote list shows.
+var levels = new[] { "Level - Manor", "Level - Wizard", "Level - Arctic", "Level - Museum" };
+string Shown(string level) => level switch
+{
+    "Level - Manor" => "HEADMAN MANOR",
+    "Level - Wizard" => "SWIFTBROOM ACADEMY",
+    "Level - Arctic" => "MCJANNEK STATION",
+    _ => "MUSEUM OF HUMAN ART",
+};
+Check(Same(Allowed(levels, NameList("level - manor"), Shown), "Level - Wizard", "Level - Arctic", "Level - Museum"),
+    "excluded: by level name, any case");
+Check(Same(Allowed(levels, NameList("Swiftbroom Academy, mcjannek station"), Shown), "Level - Manor", "Level - Museum"),
+    "excluded: by the name the vote list shows, any case");
+Check(Same(Allowed(levels, NameList("Nowhere, Manor"), Shown), levels), "excluded: a name that matches no map changes nothing");
+Check(Same(Allowed(levels, [], Shown), levels), "excluded: nothing excluded offers every map");
+
+// Excluding every map is ignored, so there is still something to vote on.
+Check(Same(Allowed(levels, NameList("Headman Manor, Level - Wizard, Level - Arctic, museum of human art"), Shown), levels),
+    "excluded: excluding every map is ignored");
+Check(Allowed([], NameList("Level - Manor"), Shown).Count == 0, "excluded: an empty pool stays empty");
+// levels as the recent list: Manor played last, Museum longest ago.
+Check(Resolve(Allowed(levels, NameList(string.Join(",", levels)), Shown), [], levels, Majority, rng) == "Level - Museum",
+    "excluded: every map excluded and every map recent still picks a map");
+
+// Excluded maps never come up: never on a shortlist, never drawn by Random or with nobody voting, in either mode,
+// and a stale vote for one (cast before the host excluded it) is ignored.
+var allowedLevels = Allowed(levels, NameList("Headman Manor, Level - Museum"), Shown);
+bool neverListed = true, neverDrawn = true;
+for (int i = 0; i < 2000; i++)
+{
+    neverListed &= Shortlist(allowedLevels, ["Level - Wizard"], 1, rng).All(m => m is "Level - Wizard" or "Level - Arctic");
+    foreach (var mode in new[] { Lottery, Majority })
+        foreach (var ballots in new[] { Array.Empty<string>(), [RandomChoice], ["Level - Manor", "Level - Manor", "Level - Wizard"] })
+            neverDrawn &= Resolve(allowedLevels, ballots, ["Level - Wizard"], mode, rng) is "Level - Wizard" or "Level - Arctic";
+}
+Check(neverListed, "excluded: never on a shortlist");
+Check(neverDrawn, "excluded: never drawn, and votes for one are ignored");
+var excludedOdds = Odds(allowedLevels, [RandomChoice], ["Level - Wizard"], Lottery);
+Check(!excludedOdds.ContainsKey("Level - Manor") && excludedOdds["Level - Arctic"] == 1f, "excluded: no odds for an excluded map");
+
+// With maps excluded the host draws the next map itself, unless the only map left out is the previous one anyway.
+Check(!DrawsLikeGame(allowedLevels, ["Level - Wizard"], levels, "Level - Wizard"), "game pick: excluded maps mean the host draws");
+Check(DrawsLikeGame(Allowed(levels, NameList("Level - Wizard"), Shown), ["Level - Wizard"], levels, "Level - Wizard"),
+    "game pick: excluding only the previous map is still the game's pick");
+
 // ---- both modes ----
 
 // The odds the vote list and the reel show are what the draw actually does.

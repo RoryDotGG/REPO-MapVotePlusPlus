@@ -24,6 +24,23 @@ public static class VoteLogic
 {
     public const string RandomChoice = "__random__";
 
+    /// <summary>A comma-separated list of map names, each trimmed, blanks dropped. It matches names in any case.</summary>
+    public static HashSet<string> NameList(string? list) => new(
+        (list ?? "").Split(',').Select(n => n.Trim()).Where(n => n.Length > 0), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The pool without the excluded maps, in pool order. A map is excluded when <paramref name="excluded"/> has its
+    /// level name or its display name, in any case. If that would leave no maps, nothing is excluded, so there is
+    /// always something to vote on.
+    /// </summary>
+    public static List<string> Allowed(IReadOnlyList<string> pool, IEnumerable<string> excluded, Func<string, string> displayName)
+    {
+        var names = new HashSet<string>(excluded, StringComparer.OrdinalIgnoreCase);
+        if (names.Count == 0) return pool.ToList();
+        var allowed = pool.Where(m => !names.Contains(m) && !names.Contains(displayName(m))).ToList();
+        return allowed.Count > 0 ? allowed : pool.ToList();
+    }
+
     /// <summary>
     /// The maps random draws skip, most recent first: the game's previous level, then up to
     /// <paramref name="count"/> - 1 levels played before it this run. A count of 1 is vanilla's rule, the previous
