@@ -131,6 +131,8 @@ Run the vote-rule self-check (no game needed):
 dotnet run --project tests/VoteLogicCheck
 ```
 
+The [check workflow](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/.github/workflows/check.yml) runs that check and builds the package on every pull request and every push to `main`. It doesn't publish anything.
+
 The mock-ups, banner and icon are HTML in [`docs/mockups`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/tree/main/docs/mockups). To re-render them, run this in PowerShell. It needs Brave, or pass `-Browser` with the path to any Chromium-based browser:
 
 ```powershell
