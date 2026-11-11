@@ -36,6 +36,10 @@ internal static class VoteSession
     // The host's rules for the vote that is up. The host sets them when the vote opens, and again if it changes a
     // setting while the vote is open, so they don't change under the reveal. Players get them with the vote.
     private static VoteMode _mode;
+    private static IReadOnlyList<string>? _recent;
+
+    /// <summary>Host only: the run levels played this run, most recent first, for RecentMapsToSkip.</summary>
+    private static readonly List<string> Played = new();
 
     // The pool is read every frame while a vote list is on screen, so it is built once and kept until AllLevels changes.
     // PoolSource is AllLevels as it was at the last build, destroyed and null entries included, to compare against.
@@ -97,12 +101,37 @@ internal static class VoteSession
     public static VoteMode Mode => _mode;
 
     /// <summary>
+    /// The maps random draws skip where they can, most recent first: the host's RecentMapsToSkip list once its vote
+    /// reaches us. Before that, and from a host older than the setting, it is vanilla's rule: the previous level alone.
+    /// </summary>
+    public static IReadOnlyList<string> Recent => _recent ?? VanillaRecent;
+
+    private static IReadOnlyList<string> VanillaRecent =>
+        PreviousLevel is { } previous ? new[] { previous } : System.Array.Empty<string>();
+
+    /// <summary>
     /// Each map's chance of winning this vote, plus Random's share, under the host's rules. Use this rather than
     /// <see cref="VoteLogic.Odds"/>, so the odds players see always follow the rules the host draws with.
     /// </summary>
-    public static Dictionary<string, float> Odds() => VoteLogic.Odds(Candidates, Votes.Values, PreviousLevel, Mode);
+    public static Dictionary<string, float> Odds() => VoteLogic.Odds(Candidates, Votes.Values, Recent, Mode);
 
-    private static string? Resolve() => VoteLogic.Resolve(Candidates, Votes.Values, PreviousLevel, Mode, Rng);
+    private static string? Resolve() => VoteLogic.Resolve(Candidates, Votes.Values, Recent, Mode, Rng);
+
+    /// <summary>The host's recent maps as its settings say now, rather than as the open vote took them.</summary>
+    private static List<string> HostRecent() => VoteLogic.Recent(PreviousLevel, Played, Plugin.RecentMapsToSkip.Value);
+
+    /// <summary>Host only, from SetRunLevel: the run is moving on to this level.</summary>
+    public static void OnRunLevel(Level? level)
+    {
+        if (!level) return;
+        var name = level!.name;
+        Played.Remove(name);
+        Played.Insert(0, name);
+        if (Played.Count > Plugin.MaxRecentMaps) Played.RemoveRange(Plugin.MaxRecentMaps, Played.Count - Plugin.MaxRecentMaps);
+    }
+
+    /// <summary>A new run (new game, loaded save, game over): the last run's maps no longer count as recent.</summary>
+    public static void ForgetPlayed() => Played.Clear();
 
     /// <summary>
     /// Rebuilds the cached pool if AllLevels has changed since the last build: a level added or removed (custom maps
@@ -186,6 +215,7 @@ internal static class VoteSession
         {
             // Left the game: forget everything so a new session starts clean.
             if (Phase != Phase.Closed || Winner != null) ResetLocal();
+            Played.Clear();
             if (HostCheck.Forget()) Revision++;
             _lastContext = VoteContext.None;
             return;
@@ -269,6 +299,7 @@ internal static class VoteSession
         // Fields after the list came after 1.1.0, which doesn't read them. A host without them only has the lottery.
         _mode = data.Length > 6 && data[6] is int mode && System.Enum.IsDefined(typeof(VoteMode), mode)
             ? (VoteMode)mode : VoteMode.Lottery;
+        _recent = data.Length > 7 && data[7] is string[] recent ? recent : null;
         Revision++;
     }
 
@@ -285,7 +316,7 @@ internal static class VoteSession
         {
             (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "", _candidates.ToArray(),
             // New fields go on the end: older versions read the ones above by position and ignore the rest.
-            (int)_mode,
+            (int)_mode, Recent.ToArray(),
         };
         _state.RaiseEvent(payload, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
     }
@@ -303,19 +334,21 @@ internal static class VoteSession
     private static void Draw()
     {
         TakeRules();
-        _candidates = VoteLogic.Shortlist(PoolNames, PreviousLevel, Plugin.MapLimit, Rng);
+        _candidates = VoteLogic.Shortlist(PoolNames, Recent, Plugin.MapLimit, Rng);
         if (Shortlisted) Plugin.Log.LogInfo($"Vote is on {_candidates.Count} map(s): {string.Join(", ", _candidates)}");
+        if (Recent.Count > 1) Plugin.Log.LogInfo($"Random draws skip recent maps where they can: {string.Join(", ", Recent)}");
     }
 
     /// <summary>The host: read its settings into the vote's rules, which go to players with the vote.</summary>
     private static void TakeRules()
     {
         _mode = Plugin.Mode.Value;
+        _recent = HostRecent();
     }
 
     /// <summary>
-    /// The host changed MapsPerVote mid-game (REPOConfig): draw the open vote's list again so it applies now.
-    /// Votes for Random or a map that is still on the list stand; the rest are dropped.
+    /// The host changed MapsPerVote or RecentMapsToSkip mid-game (REPOConfig): draw the open vote's list again so it
+    /// applies now. Votes for Random or a map that is still on the list stand; the rest are dropped.
     /// </summary>
     public static void Redraw()
     {
@@ -384,6 +417,7 @@ internal static class VoteSession
         _afterReveal = null;
         _candidates = new List<string>();
         _mode = VoteMode.Lottery;
+        _recent = null;
         Revision++;
     }
 
@@ -422,21 +456,23 @@ internal static class VoteSession
     }
 
     /// <summary>
-    /// Called from SetRunLevel on the host. Returns the level to load, or null to let the game pick at random
-    /// (nobody voted on a full list). An unfinished vote resolves instantly so the game never waits on us, and a
-    /// shortlist always resolves, so the next map is one of the maps that were offered.
+    /// Called from SetRunLevel on the host. Returns the level to load, or null to let the game pick at random. An
+    /// unfinished vote resolves instantly so the game never waits on us. The game is only left to pick when nobody
+    /// voted and it would pick from the same maps as the host's rules do. A shortlist, or skipping anything other than
+    /// the one previous map, always resolves here, so the next map keeps to the rules the vote showed.
     /// </summary>
     public static Level? ConsumeWinner(RunManager rm)
     {
+        if (Phase == Phase.Closed) return DrawWithoutVote(rm);
+
         string? name = Phase switch
         {
             Phase.Locked or Phase.Revealing => Winner,
-            Phase.Open when Votes.Count > 0 || Shortlisted => Resolve(),
+            Phase.Open when Votes.Count > 0 || !DrawsLikeGame(Candidates, Recent) => Resolve(),
             _ => null,
         };
-        if (Phase == Phase.Closed && name == null) return null;
 
-        var level = name == null ? null : rm.levels.FirstOrDefault(l => l && l.name == name);
+        var level = Find(rm, name);
         Phase = Phase.Closed;
         Votes.Clear();
         Winner = level ? level!.name : null;
@@ -446,6 +482,28 @@ internal static class VoteSession
         if (level) Plugin.Log.LogInfo($"Loading voted map {level!.name}");
         return level;
     }
+
+    /// <summary>
+    /// No vote this time (it is switched off here). The game picks, unless the host's rules would pick from other maps:
+    /// then the host draws, so RecentMapsToSkip holds with voting off too.
+    /// </summary>
+    private static Level? DrawWithoutVote(RunManager rm)
+    {
+        var pool = PoolNames;
+        var recent = HostRecent();
+        if (DrawsLikeGame(pool, recent)) return null;
+
+        var level = Find(rm, VoteLogic.Resolve(pool, System.Array.Empty<string>(), recent, Plugin.Mode.Value, Rng));
+        if (level) Plugin.Log.LogInfo($"No vote here: loading {level!.name}, drawn by the host's map rules");
+        return level;
+    }
+
+    /// <summary>Whether the game's own pick would come from the same maps as a random draw under these rules.</summary>
+    private static bool DrawsLikeGame(IReadOnlyList<string> pool, IReadOnlyList<string> recent) =>
+        VoteLogic.DrawsLikeGame(pool, recent, PoolNames, PreviousLevel);
+
+    private static Level? Find(RunManager rm, string? name) =>
+        name == null ? null : rm.levels.FirstOrDefault(l => l && l.name == name);
 
     public static string PlayerName(int actor)
     {

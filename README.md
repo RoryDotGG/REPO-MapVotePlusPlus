@@ -13,13 +13,14 @@
 
 ## How the next map is picked
 
-- If nobody votes, you get a random map that isn't the one you just played, as in vanilla.
+- If nobody votes, you get a random map that isn't the one you just played, as in vanilla. The host can make it skip more recent maps with `RecentMapsToSkip`.
 - If anyone votes, the winner comes only from the maps people picked. How depends on the host's `VoteMode`:
   - **Lottery** (the default): each vote is one ticket, so 3 votes for A and 1 for B gives A a 75% chance and B 25%.
   - **Majority**: the map with the most votes wins. A tie is drawn at random between the tied maps, so 2 votes each for A and B is 50/50, and a map with fewer votes can't win.
 - A vote for Random can land on any map on the list. In a lottery it's one ticket. In a majority vote it counts as a choice of its own: if Random has the most votes, or ties and is drawn, the next map is random.
 - The list shows who has voted for each map as the votes come in.
-- The host can limit how many maps each vote offers with `MapsPerVote`. Each time a vote opens, that many maps are drawn at random, never including the one you just played. Random, and the pick when nobody votes, only land on one of those maps. The vote list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**.
+- The host can limit how many maps each vote offers with `MapsPerVote`. Each time a vote opens, that many maps are drawn at random, skipping recent maps (by default, the one you just played). Random, and the pick when nobody votes, only land on one of those maps. The vote list says so, for example **3 OF 5 MAPS, DRAWN AT RANDOM**.
+- The host can keep the last few maps played this run out of random draws with `RecentMapsToSkip`. That covers Random, the pick when nobody votes and the maps `MapsPerVote` draws. `1` is vanilla's rule: skip the map you just played. `0` lets it come straight back. If too few other maps are left, the ones played longest ago come back first. A vote for a recent map still counts. It applies with voting off too.
 
 ## What it looks like
 
@@ -80,21 +81,22 @@ If you can't vote because of the host, the vote list greys out its maps and says
 | `Voting.VoteInLobbyMenu` | `true` | |
 | `Voting.VoteInTruck` | `true` | |
 | `Voting.ShowVoteOnArrival` | `true` | Opens the truck vote when you arrive, so you pick a map or skip first. Each player's own setting. |
-| `Voting.MapsPerVote` | `All` | `All`, or 2 to 20. How many maps each vote offers, drawn at random every vote and never the map you just played. The host's value is used. |
+| `Voting.MapsPerVote` | `All` | `All`, or 2 to 20. How many maps each vote offers, drawn at random every vote, skipping recent maps (see `RecentMapsToSkip`). The host's value is used. |
 | `Voting.VoteMode` | `Lottery` | `Lottery`: each vote is a ticket in a draw. `Majority`: the most votes wins, and a tie is drawn at random. The host's value is used. |
+| `Voting.RecentMapsToSkip` | `1` | 0 to 10. How many of the maps played most recently this run random draws skip. `1` skips the map you just played, as in vanilla. `0` lets it come straight back. The host's value is used. |
 
 ### Changing settings in game
 
 With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) installed, press **Mods** in the main menu, the lobby or the escape menu, pick **Map Vote++**, change a setting and press **Save Changes**. Changes apply straight away:
 
-- **Maps Per Vote** draws the open vote's list again. Votes for Random, or for a map that's still on the list, are kept.
+- **Maps Per Vote** and **Recent Maps To Skip** draw the open vote's list again. Votes for Random, or for a map that's still on the list, are kept.
 - **Vote Mode** applies to the open vote straight away, and everyone's odds change with it. Once the reveal has started, the map it lands on stands and the change applies to the next vote.
 - If the host switches off **Vote In Lobby Menu** or **Vote In Truck** where a vote is open, it closes and the next map is random. Switching it back on opens a new vote.
 - **Toggle Key** works at once. Switching on **Show Vote On Arrival** applies the next time you arrive in the truck.
 
 ## How it works
 
-Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately. The state carries the host's vote rules too, so every player's odds and reveal follow the host's settings. To load the winner, the host patches `RunManager.SetRunLevel`, and the game's own level sync tells every client which map it is.
+Clients send their votes to the host over REPOLib `NetworkedEvent`s. The host draws the winner and broadcasts the full vote state, so players who join mid-vote catch up immediately. The state carries the host's vote rules too, so every player's odds and reveal follow the host's settings. To load the winner, the host patches `RunManager.SetRunLevel`, and the game's own level sync tells every client which map it is. The same patch notes each level the run moves on to, for `RecentMapsToSkip`, and a patch on `RunManager.ResetProgress` forgets them when a new run starts.
 
 The host also puts its MapVote++ version and vote settings in the Photon room's custom properties. Every player gets these on joining, whatever mods they run. That's how a player tells a host without the mod apart from a vote that hasn't reached them yet.
 
