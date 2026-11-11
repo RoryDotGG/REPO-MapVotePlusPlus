@@ -13,19 +13,26 @@ internal sealed class MapInfo
     public Color Color = Ui.Amber;
 
     private static readonly Dictionary<string, MapInfo> Cache = new();
+    /// <summary>Names that aren't in the pool, stripped once. The result depends on the name alone, so it never goes stale.</summary>
+    private static readonly Dictionary<string, string> Stripped = new();
 
+    /// <summary>Called every frame while a vote is on screen, so it looks names up rather than building anything.</summary>
     public static string DisplayName(string? levelName)
     {
         if (string.IsNullOrEmpty(levelName)) return "";
-        if (levelName == VoteLogic.RandomChoice) return "RANDOM";
-        foreach (var level in VoteSession.Pool)
-            if (level.name == levelName) return Get(level).Name;
-        return Strip(levelName!);
+        string name = levelName!;
+        if (name == VoteLogic.RandomChoice) return "RANDOM";
+        if (VoteSession.TryGetPoolLevel(name, out var level)) return Get(level, name).Name;
+        if (!Stripped.TryGetValue(name, out var stripped)) Stripped[name] = stripped = Strip(name);
+        return stripped;
     }
 
-    public static MapInfo Get(Level level)
+    public static MapInfo Get(Level level) => Get(level, level.name);
+
+    /// <param name="key">The level's name. Reading a Unity object's name makes a new string, so pass it when it's known.</param>
+    private static MapInfo Get(Level level, string key)
     {
-        if (Cache.TryGetValue(level.name, out var info)) return info;
+        if (Cache.TryGetValue(key, out var info)) return info;
         info = new MapInfo { Name = NameOf(level), Color = ColorOf(level) };
         var sprite = ArtOf(level);
         if (sprite)
@@ -35,7 +42,7 @@ internal sealed class MapInfo
             info.ArtUv = new Rect(r.x / sprite.texture.width, r.y / sprite.texture.height,
                 r.width / sprite.texture.width, r.height / sprite.texture.height);
         }
-        Cache[level.name] = info;
+        Cache[key] = info;
         return info;
     }
 
