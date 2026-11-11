@@ -187,6 +187,33 @@ Check(!DrawsLikeGame(allowedLevels, ["Level - Wizard"], levels, "Level - Wizard"
 Check(DrawsLikeGame(Allowed(levels, NameList("Level - Wizard"), Shown), ["Level - Wizard"], levels, "Level - Wizard"),
     "game pick: excluding only the previous map is still the game's pick");
 
+// ---- host's pick ----
+
+// The host's map is the next map, even one that random draws skip as recent: the host chose it on purpose.
+Check(ResolveHostPick(pool, "C", [], rng) == "C", "host's pick: the host's map is the next map");
+Check(ResolveHostPick(pool, "A", ["A", "B"], rng) == "A", "host's pick: a recent map still stands");
+
+// The host picking Random draws evenly from the random pool, as a vote for Random would: recent maps skipped.
+var hostRandom = new Dictionary<string, int>();
+for (int i = 0; i < 20000; i++)
+{
+    var w = ResolveHostPick(pool, RandomChoice, ["A", "B"], rng)!;
+    hostRandom[w] = hostRandom.GetValueOrDefault(w) + 1;
+}
+Check(hostRandom.Keys.Order().SequenceEqual(["C", "D"]) && Math.Abs(hostRandom["C"] / 20000f - 0.5f) < 0.02f,
+    "host's pick: Random draws evenly from the maps that aren't recent");
+var hostShortlist = new HashSet<string>();
+for (int i = 0; i < 2000; i++) hostShortlist.Add(ResolveHostPick(["B", "D"], RandomChoice, ["A"], rng)!);
+Check(hostShortlist.SetEquals(["B", "D"]), "host's pick: Random stays on the shortlist");
+Check(ResolveHostPick(pool, RandomChoice, ["D", "C", "B", "A"], rng) == "A",
+    "host's pick: Random with every map recent still finds a map");
+
+// Only a map on the vote list can be picked: not one the shortlist didn't draw, nor a stale name. An empty list has none.
+Check(ResolveHostPick(["B", "D"], "C", [], rng) == null && ResolveHostPick(pool, "ZZZ", [], rng) == null,
+    "host's pick: only a map on the list");
+Check(ResolveHostPick([], "A", [], rng) == null && ResolveHostPick([], RandomChoice, [], rng) == null,
+    "host's pick: an empty list has no pick");
+
 // ---- both modes ----
 
 // The odds the vote list and the reel show are what the draw actually does.

@@ -42,6 +42,9 @@ internal static class Ui
 
     public static bool KeyDown(Key key) => Keyboard.current != null && key != Key.None && Keyboard.current[key].wasPressedThisFrame;
 
+    /// <summary>Either Shift key is held down.</summary>
+    public static bool ShiftHeld => Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+
     public static RectTransform Rect(string name, Transform parent)
     {
         var go = new GameObject(name, typeof(RectTransform));

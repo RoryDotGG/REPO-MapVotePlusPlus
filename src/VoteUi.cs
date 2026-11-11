@@ -126,8 +126,9 @@ internal sealed class VoteUi : MonoBehaviour
     private void OnStateChanged()
     {
         _seenRevision = VoteSession.Revision;
-        if (VoteSession.Phase == Phase.Revealing && VoteSession.Winner != null && _reelFor != VoteSession.Winner)
-            StartReel(VoteSession.Winner, VoteSession.Odds());
+        if (VoteSession.Phase != Phase.Revealing || VoteSession.Winner == null || _reelFor == VoteSession.Winner) return;
+        // The host's pick isn't drawn from the votes, so its reel spins evenly through the list rather than by their odds.
+        StartReel(VoteSession.Winner, VoteSession.HostPick != null ? new Dictionary<string, float>() : VoteSession.Odds());
     }
 
     private static bool Typing() => !SemiFunc.NoTextInputsActive() || (ChatManager.instance && ChatManager.instance.chatActive);
@@ -214,7 +215,7 @@ internal sealed class VoteUi : MonoBehaviour
                 _chipSub.text = $"{muted}NEXT MAP INCOMING</color>";
                 break;
             default:
-                _chipTitle.text = VoteSession.Winner != null ? "NEXT MAP" : "MAP VOTE";
+                _chipTitle.text = VoteSession.Winner == null ? "MAP VOTE" : VoteSession.HostPickedMap ? "HOST'S PICK" : "NEXT MAP";
                 _chipSub.text = VoteSession.Winner != null ? $"{amber}{MapInfo.DisplayName(VoteSession.Winner)}</color>" : $"{muted}RANDOM MAP</color>";
                 break;
         }
@@ -314,9 +315,12 @@ internal sealed class VoteUi : MonoBehaviour
     /// <summary>
     /// How the winner won, from the ballots: "3 OF 4 VOTES", or the Random ballots it came through, or nobody voting.
     /// It states the count and nothing about how the winner was drawn, so it reads right whatever the vote rules are.
+    /// When the host picked, the ballots didn't count, so it says that instead.
     /// </summary>
     private static string VoteLine(string winner, IReadOnlyList<string> candidates)
     {
+        if (VoteSession.HostPick is { } pick) return pick == VoteLogic.RandomChoice ? "HOST'S PICK  /  RANDOM MAP" : "HOST'S PICK";
+
         int total = 0, forWinner = 0, forRandom = 0;
         foreach (var ballot in VoteSession.Votes.Values)
         {

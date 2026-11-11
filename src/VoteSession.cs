@@ -22,6 +22,13 @@ internal static class VoteSession
 
     public static Phase Phase { get; private set; }
     public static string? Winner { get; private set; }
+    /// <summary>
+    /// What the host picked for everyone with a shift-click: a map, or Random. Null while the votes decide. Players get it
+    /// with the vote, so their reveal says it was the host's pick rather than counting votes that didn't count.
+    /// </summary>
+    public static string? HostPick { get; private set; }
+    /// <summary>The host picked a map itself, rather than Random.</summary>
+    public static bool HostPickedMap => HostPick != null && HostPick != VoteLogic.RandomChoice;
     public static readonly Dictionary<int, string> Votes = new();
     /// <summary>Bumped on every state change so the UI can react without diffing.</summary>
     public static int Revision { get; private set; }
@@ -340,6 +347,7 @@ internal static class VoteSession
             ? (VoteMode)mode : VoteMode.Lottery;
         _recent = data.Length > 7 && data[7] is string[] recent ? recent : null;
         _allowedCount = data.Length > 8 && data[8] is int allowed ? allowed : 0;
+        HostPick = data.Length > 9 && data[9] is string { Length: > 0 } pick ? pick : null;
         Revision++;
     }
 
@@ -356,7 +364,7 @@ internal static class VoteSession
         {
             (int)Phase, SecondsLeft, Votes.Keys.ToArray(), Votes.Values.ToArray(), Winner ?? "", _candidates.ToArray(),
             // New fields go on the end: older versions read the ones above by position and ignore the rest.
-            (int)_mode, Recent.ToArray(), _allowedCount,
+            (int)_mode, Recent.ToArray(), _allowedCount, HostPick ?? "",
         };
         _state.RaiseEvent(payload, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
     }
@@ -366,6 +374,7 @@ internal static class VoteSession
         Phase = Phase.Open;
         Votes.Clear();
         Winner = null;
+        HostPick = null;
         _deadline = -1f;
         Draw();
         Broadcast();
@@ -422,6 +431,7 @@ internal static class VoteSession
         Phase = Phase.Closed;
         Votes.Clear();
         Winner = null;
+        HostPick = null;
         _deadline = -1f;
         Broadcast();
     }
@@ -432,12 +442,29 @@ internal static class VoteSession
     /// </summary>
     public static bool Shortlisted => _candidates.Count > 0 && _candidates.Count < MapsAllowed;
 
-    private static void BeginReveal()
+    private static void BeginReveal() => Reveal(Resolve(), $"Vote closed with {Votes.Count} ballot(s)");
+
+    /// <summary>
+    /// The host picks the next map outright (a shift-click on the vote list), for streams and planned runs. The vote ends
+    /// there: no ballot counts, and the reveal plays now and lands on the host's map for everyone. Random draws a map
+    /// from the vote's random pool instead. Once made, the pick stands through to <see cref="ConsumeWinner"/>, even for a
+    /// map RecentMapsToSkip would skip, or one ExcludedMaps leaves out after the pick: the host chose it on purpose.
+    /// </summary>
+    public static void PickForEveryone(string choice)
     {
-        Winner = Resolve();
+        if (!IsHost || Phase != Phase.Open) return;
+        var map = VoteLogic.ResolveHostPick(Candidates, choice, Recent, Rng);
+        if (map == null) return;
+        HostPick = choice;
+        Reveal(map, choice == VoteLogic.RandomChoice ? "Host picked Random" : "Host picked the next map");
+    }
+
+    private static void Reveal(string? winner, string how)
+    {
+        Winner = winner;
         Phase = Phase.Revealing;
         _deadline = Time.unscaledTime + RevealSeconds;
-        Plugin.Log.LogInfo($"Vote closed with {Votes.Count} ballot(s); next map: {Winner}");
+        Plugin.Log.LogInfo($"{how}; next map: {winner}");
         Broadcast();
     }
 
@@ -458,6 +485,7 @@ internal static class VoteSession
         Phase = Phase.Closed;
         Votes.Clear();
         Winner = null;
+        HostPick = null;
         _deadline = -1f;
         _afterReveal = null;
         _candidates = new List<string>();
@@ -506,6 +534,7 @@ internal static class VoteSession
     /// unfinished vote resolves instantly so the game never waits on us. The game is only left to pick when nobody
     /// voted and it would pick from the same maps as the host's rules do. A shortlist, excluded maps, or skipping
     /// anything other than the one previous map always resolve here, so the next map keeps to the rules the vote showed.
+    /// A rolled vote's winner, the host's own pick included, is loaded as it is, without checking it against the rules again.
     /// </summary>
     public static Level? ConsumeWinner(RunManager rm)
     {
@@ -522,10 +551,11 @@ internal static class VoteSession
         Phase = Phase.Closed;
         Votes.Clear();
         Winner = level ? level!.name : null;
+        if (!level) HostPick = null;
         _deadline = -1f;
         _afterReveal = null;
         Broadcast();
-        if (level) Plugin.Log.LogInfo($"Loading voted map {level!.name}");
+        if (level) Plugin.Log.LogInfo(HostPickedMap ? $"Loading the host's pick {level!.name}" : $"Loading voted map {level!.name}");
         return level;
     }
 

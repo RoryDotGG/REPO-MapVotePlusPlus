@@ -23,6 +23,8 @@ internal sealed class NativeBoard : MonoBehaviour
     private const int LobbyRows = 10;
     /// <summary>Under the list, bottom-left of the right-hand popup: where REPOConfig puts its Save Changes button.</summary>
     private static readonly Vector2 SkipPosition = new(370f, 18f);
+    /// <summary>The host's reminder, on the right of the status line while the vote is open. Players never see it.</summary>
+    private const string HostHint = "SHIFT-CLICK TO PICK FOR EVERYONE";
 
     private sealed class Row
     {
@@ -47,7 +49,7 @@ internal sealed class NativeBoard : MonoBehaviour
     private REPOPopupPage? _popup;
     private float _rowWidth;
     private TMP_FontAsset? _font;
-    private TextMeshProUGUI _status = null!, _hint = null!;
+    private TextMeshProUGUI _status = null!, _hint = null!, _hostHint = null!;
     private REPOScrollViewElement? _hintElement;
     private readonly List<Row> _rows = new();
     private Color _normal = Color.gray;
@@ -102,6 +104,8 @@ internal sealed class NativeBoard : MonoBehaviour
         board._hint = board.Label("Hint", body, 11f, Ui.Muted, new Vector2(Pad, -Pad - 25f), new Vector2(inner, 16f),
             TextAlignmentOptions.MidlineRight);
         board._status = board.Label("Status", body, 11f, Ui.Muted, new Vector2(Pad, -Pad - 46f), new Vector2(inner, 16f));
+        board._hostHint = board.Label("HostHint", body, 11f, Ui.Muted, new Vector2(Pad, -Pad - 46f), new Vector2(inner, 16f),
+            TextAlignmentOptions.MidlineRight);
         var line = Ui.Image("Line", body, Ui.Amber.WithAlpha(0.8f)).rectTransform;
         line.pivot = Vector2.zero;
         line.localPosition = new Vector2(Pad, -LobbyHeader + 3f);
@@ -162,6 +166,9 @@ internal sealed class NativeBoard : MonoBehaviour
         page.AddElementToScrollView(scroller =>
         {
             board._status = board.Label("Status", scroller, 12f, Ui.Muted, Vector2.zero, new Vector2(board._rowWidth, 20f));
+            // Over the status line, right-aligned, so it needs no line of its own.
+            board._hostHint = board.Label("HostHint", board._status.rectTransform, 12f, Ui.Muted, Vector2.zero,
+                new Vector2(board._rowWidth, 20f), TextAlignmentOptions.MidlineRight);
             return board._status.rectTransform;
         }, bottomPadding: 4f);
         board.SyncRows();
@@ -301,6 +308,12 @@ internal sealed class NativeBoard : MonoBehaviour
     private void Pick(string choice)
     {
         if (VoteSession.Phase != Phase.Open) return;
+        // Shift on a click or a number key: the host picks for everyone, and the reveal plays now. Anyone else just votes.
+        if (VoteSession.IsHost && Ui.ShiftHeld)
+        {
+            VoteSession.PickForEveryone(choice);
+            return;
+        }
         VoteSession.Cast(choice);
         // The arrival prompt has done its job once this player has a pick, so let them get on with the truck.
         if (_prompt && VoteSession.MyVote != null) CloseTruckPage();
@@ -422,6 +435,8 @@ internal sealed class NativeBoard : MonoBehaviour
         string? winner = VoteUi.Instance ? VoteUi.Instance!.RevealedWinner : VoteSession.Winner;
         string? mine = VoteSession.MyVote;
         _status.text = problem?.Status ?? Status(phase, winner);
+        // Singleplayer has nobody else to pick for: a plain click already wins.
+        _hostHint.text = open && VoteSession.IsHost && SemiFunc.IsMultiplayer() ? HostHint : "";
         if (_lobby && winner != _followedWinner)
         {
             // Bring the winner into view when the roll lands.
@@ -449,8 +464,9 @@ internal sealed class NativeBoard : MonoBehaviour
 
         // The maps' chances, under the host's VoteMode, show how far ahead the leader really is. Random's own row stays
         // blank: its share is already spread across the maps' chances, and showing it too would push the column past
-        // 100%.
-        var odds = problem == null ? CurrentOdds() : null;
+        // 100%. Once the host has picked, the votes no longer decide, so the column goes blank. It doesn't show the host's
+        // map at 100%, which would give away the reveal.
+        var odds = problem == null && VoteSession.HostPick == null ? CurrentOdds() : null;
         foreach (var row in _rows)
         {
             var voters = VoteSession.Votes.Where(v => v.Value == row.Choice).Select(v => v.Key).OrderBy(a => a).ToList();
@@ -495,7 +511,8 @@ internal sealed class NativeBoard : MonoBehaviour
         {
             Phase.Open when _lobby => $"{tally}   ROLLS WHEN THE HOST STARTS",
             Phase.Open => $"{tally}   ROLLS ON DEPARTURE",
-            _ when winner != null => $"NEXT MAP  <color=#{Ui.HexOf(Ui.Amber)}>{MapInfo.DisplayName(winner)}</color>",
+            _ when winner != null =>
+                $"{(VoteSession.HostPickedMap ? "HOST'S PICK" : "NEXT MAP")}  <color=#{Ui.HexOf(Ui.Amber)}>{MapInfo.DisplayName(winner)}</color>",
             Phase.Revealing => "ROLLING...",
             _ => "WAITING FOR HOST",
         };
