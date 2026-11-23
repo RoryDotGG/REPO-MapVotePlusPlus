@@ -16,6 +16,8 @@ const MIN_OFFERS_TO_NAME = 20;
 const MIN_DAYS_TO_NAME = 3;
 // Level names look like "Level - Manor". Anything else, such as a link or emoji, is counted but only ever shown as Other maps.
 const NAMEABLE = /^[\p{L}\p{N} '&()_-]+$/u;
+// The base game's levels are public, so they're always named. Desert is Sunstone Valley Resort.
+const BASE_GAME = new Set(["Level - Arctic", "Level - Desert", "Level - Manor", "Level - Museum", "Level - Wizard"]);
 
 export default {
   async fetch(request, env, ctx) {
@@ -158,7 +160,7 @@ async function stats(env, now = Date.now()) {
   for (const o of offers) {
     const row = { map: o.map, offered: o.offered, ballots: o.ballots, wins: winsByMap[o.map] ?? 0 };
     if (o.map === RANDOM) random = row;
-    else if (o.offered >= MIN_OFFERS_TO_NAME && o.days >= MIN_DAYS_TO_NAME && NAMEABLE.test(o.map)) maps.push(row);
+    else if (BASE_GAME.has(o.map) || (o.offered >= MIN_OFFERS_TO_NAME && o.days >= MIN_DAYS_TO_NAME && NAMEABLE.test(o.map))) maps.push(row);
     else for (const k of ["offered", "ballots", "wins"]) other[k] += row[k];
   }
   maps.sort((a, b) => b.wins - a.wins || b.offered - a.offered);
