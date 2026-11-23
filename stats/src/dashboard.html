@@ -202,7 +202,8 @@ function maps(el, rows, random) {
 const HOW = { vote: "The votes", none: "Nobody voted (random)", host: "Host's pick", hostRandom: "Host rolled Random" };
 const CONTEXT = { lobby: "Lobby menu", truck: "Truck" };
 
-fetch("/v1/stats").then((r) => r.json()).then((s) => {
+// no-store: Cloudflare hands cached stats to browsers with a 4 hour max-age, so skip the browser cache; the edge still caches for 5 minutes.
+const load = () => fetch("/v1/stats", { cache: "no-store" }).then((r) => r.json()).then((s) => {
   $("games").textContent = fmt(s.now.games);
   $("players").textContent = fmt(s.now.players);
   $("votes").textContent = fmt(s.rolls.reduce((t, r) => t + r.n, 0));
@@ -218,7 +219,9 @@ fetch("/v1/stats").then((r) => r.json()).then((s) => {
   shares($("mpv"), Object.entries(s.mapsPerVote).map(([k, n]) => [k === "0" ? "All" : k, n]));
   shares($("skip"), Object.entries(s.recentSkip));
   $("updated").textContent = `Updated ${new Date(s.generated).toLocaleString("en-GB")}. Refreshes every 5 minutes.`;
-}).catch(() => { $("updated").textContent = "Couldn't load the stats. Try again in a minute."; });
+}).catch(() => { $("updated").textContent = "Couldn't load the stats. Trying again in 5 minutes."; });
+load();
+setInterval(load, 5 * 60 * 1000);
 </script>
 </body>
 </html>
