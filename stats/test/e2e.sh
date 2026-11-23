@@ -11,11 +11,12 @@ WRANGLER=node_modules/.bin/wrangler
 fails=0
 
 "$WRANGLER" d1 execute mapvote-stats --local --persist-to "$STATE" --file schema.sql >/dev/null
-# Naming cases: a real map on 3 days, a real map in a 1-day burst, and a link-like name on 3 days.
+# Naming cases: a real map on 3 days, a real map in a 1-day burst, a link-like name on 3 days, and a base-game map offered twice.
 read -r d0 d1 d2 < <(node -e 'const d = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10); console.log(d(0), d(1), d(2))')
 "$WRANGLER" d1 execute mapvote-stats --local --persist-to "$STATE" --command "INSERT INTO offers VALUES
   ('$d0','Level - Manor',10,5),('$d1','Level - Manor',10,5),('$d2','Level - Manor',10,5),
   ('$d0','Level - Burst',40,40),
+  ('$d0','Level - Desert',2,0),
   ('$d0','visit evil.com',10,1),('$d1','visit evil.com',10,1),('$d2','visit evil.com',10,1);" >/dev/null
 
 "$WRANGLER" dev --port "$PORT" --ip 127.0.0.1 --persist-to "$STATE" --show-interactive-dev-session=false >"$STATE/dev.log" 2>&1 &
@@ -47,7 +48,7 @@ expect big-with-length 413 "$(post --data-binary @"$STATE/big.txt")"
 expect big-chunked 413 "$(post -H 'transfer-encoding: chunked' --data-binary @"$STATE/big.txt")"
 
 stats=$(curl -s "$B/v1/stats")
-expect named-maps 'Level - Manor|OTHER' "$(field '(s) => s.maps.map((m) => m.map ?? "OTHER").join("|")' <<<"$stats")"
+expect named-maps 'Level - Manor|Level - Desert|OTHER' "$(field '(s) => s.maps.map((m) => m.map ?? "OTHER").join("|")' <<<"$stats")"
 expect cached-despite-query "$(field '(s) => s.generated' <<<"$stats")" "$(curl -s "$B/v1/stats?bust=$RANDOM" | field '(s) => s.generated')"
 
 # POSTs 8-12
