@@ -300,4 +300,21 @@ Check(Shortlist([], ["A"], 3, rng).Count == 0, "empty pool gives an empty shortl
 // Single-map pool never deadlocks.
 Check(Resolve(["A"], [], ["A"], Lottery, rng) == "A" && Resolve(["A"], [], ["A"], Majority, rng) == "A", "single map pool");
 Check(Resolve([], ["A"], [], Lottery, rng) == null && Resolve([], ["A"], [], Majority, rng) == null, "empty pool returns null");
+// ---- anonymous stats pings ----
+
+var statMaps = new[] { "Level - Manor", "Level - \"Quoted\" \\ Pack\n" };
+var voted = StatsPayload.Vote("Level - Manor", truck: false, hostPick: null, statMaps, ["Level - Manor", "Level - Manor", RandomChoice, "gone"], 4);
+var votedJson = StatsPayload.Json(voted);
+Console.WriteLine("    ping " + votedJson);
+var parsed = System.Text.Json.JsonDocument.Parse(votedJson).RootElement;
+var offers = parsed.GetProperty("offers");
+Check(parsed.GetProperty("how").GetString() == "vote" && parsed.GetProperty("context").GetString() == "lobby",
+    "stats: a vote with ballots is 'vote'");
+Check(offers.GetProperty("Level - Manor").GetInt32() == 2 && offers.GetProperty(RandomChoice).GetInt32() == 1
+    && !offers.TryGetProperty("gone", out _), "stats: ballots counted per offered map, Random included, unknown dropped");
+Check(offers.TryGetProperty(statMaps[1], out var odd) && odd.GetInt32() == 0, "stats: quotes, backslashes and control characters survive JSON");
+Check(StatsPayload.Vote("Level - Manor", true, null, statMaps, [], 2)["how"] is "none", "stats: no ballots is 'none'");
+Check(StatsPayload.Vote("Level - Manor", true, "Level - Manor", statMaps, ["Level - Manor"], 2)["how"] is "host", "stats: host's map pick is 'host'");
+Check(StatsPayload.Vote("Level - Manor", true, RandomChoice, statMaps, [], 2)["how"] is "hostRandom", "stats: host's Random is 'hostRandom'");
+
 Console.WriteLine("all checks passed");

@@ -28,6 +28,7 @@ public class Plugin : BaseUnityPlugin
     internal static ConfigEntry<VoteMode> Mode = null!;
     internal static ConfigEntry<int> RecentMapsToSkip = null!;
     internal static ConfigEntry<string> ExcludedMaps = null!;
+    internal static ConfigEntry<bool> ShareAnonymousStats = null!;
 
     /// <summary>The most RecentMapsToSkip goes up to, and how many played maps the host keeps track of.</summary>
     internal const int MaxRecentMaps = 10;
@@ -57,6 +58,9 @@ public class Plugin : BaseUnityPlugin
         ExcludedMaps = Config.Bind("Voting", "ExcludedMaps", "",
             "Maps that never come up: they aren't in the vote and are never drawn at random, even with voting off. A comma-separated list, naming each map as the vote list shows it (Headman Manor) or by its level name (Level - Manor), in any case. If it names every map, it's ignored. The log says which maps it leaves out, and lists every map's names if one doesn't match. The host's value is used, and changing it mid-vote draws the list again.");
 
+        ShareAnonymousStats = Config.Bind("Privacy", "ShareAnonymousStats", true,
+            "When you host, send anonymous counts to the public MapVote++ stats page: how many players, which map each vote picked and how, and your vote settings. Nothing that identifies you, your game or your players is sent or kept: no IDs, names, lobby codes or IP addresses. Each ping is written to the log at debug level. Off: nothing is sent.");
+
         // REPOConfig changes settings mid-game, so apply them to the vote that is open now, not just the next one.
         MapsPerVote.SettingChanged += (_, _) => VoteSession.Redraw();
         Mode.SettingChanged += (_, _) => VoteSession.RulesChanged();
@@ -74,6 +78,7 @@ public class Plugin : BaseUnityPlugin
         host.hideFlags = HideFlags.HideAndDontSave;
         DontDestroyOnLoad(host);
         host.AddComponent<VoteUi>();
+        host.AddComponent<Stats>();
 
         Log.LogInfo($"{Name} {Version} loaded");
     }

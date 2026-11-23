@@ -88,6 +88,7 @@ If you can't vote because of the host, the vote list greys out its maps and says
 | `Voting.VoteMode` | `Lottery` | `Lottery`: each vote is a ticket in a draw. `Majority`: the most votes wins, and a tie is drawn at random. The host's value is used. |
 | `Voting.RecentMapsToSkip` | `1` | 0 to 10. How many of the maps played most recently this run random draws skip. `1` skips the map you just played, as in vanilla. `0` lets it come straight back. The host's value is used. |
 | `Voting.ExcludedMaps` | *(empty)* | Comma-separated maps that never come up, named as the vote list shows them (`Headman Manor`) or by level name (`Level - Manor`), in any case. Ignored if it names every map. The host's value is used. |
+| `Privacy.ShareAnonymousStats` | `true` | When you host, send anonymous counts to the public stats page. See [Anonymous stats](#anonymous-stats). `false` sends nothing. |
 
 ### Changing settings in game
 
@@ -97,6 +98,19 @@ With [REPOConfig](https://thunderstore.io/c/repo/p/nickklmao/REPOConfig/) instal
 - **Vote Mode** applies to the open vote straight away, and everyone's odds change with it. Once the reveal has started, the map it lands on stands and the change applies to the next vote.
 - If the host switches off **Vote In Lobby Menu** or **Vote In Truck** where a vote is open, it closes and the next map is random, still keeping to **Excluded Maps** and **Recent Maps To Skip**. Switching it back on opens a new vote.
 - **Toggle Key** works at once. Switching on **Show Vote On Arrival** applies the next time you arrive in the truck.
+
+## Anonymous stats
+
+When you host, MapVote++ sends a few anonymous counts to a public stats page, [mvpp.rory.gg](https://mvpp.rory.gg), so we can see which maps people pick and how many people play. Players who aren't hosting send nothing. Turn it off with `ShareAnonymousStats = false`.
+
+What a host sends:
+
+- **Once every half hour while you're in a game:** the mod version, how many players are in it, and your `VoteMode`, `MapsPerVote` and `RecentMapsToSkip`.
+- **Each time a vote rolls:** the map that won, whether it was the lobby or the truck vote, how it was won (votes, nobody voted, host's pick), how many votes each offered map got, and how many players there were.
+
+What's never sent or kept: IDs of any kind, player or Steam names, lobby codes, chat, or anything else about you or your game. The stats server doesn't read or store IP addresses. It adds each ping to totals per day (per half hour for games and players) and throws the ping away, so there's no record of any one game to leak. Maps offered fewer than 20 times in 30 days are grouped as "Other maps" on the page, so a private map never shows by name.
+
+To see exactly what your game sends, set `LogLevels` to include `Debug` in `BepInEx/config/BepInEx.cfg`. Each ping is written to the log as `Anonymous stats: {...}`. The server code is in [`stats/`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/tree/main/stats).
 
 ## How it works
 
@@ -116,6 +130,8 @@ The vote list is made of the game's own menu buttons, via MenuLib. It's docked o
 | [`src/NativeBoard.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/NativeBoard.cs) | The vote list, as a game menu (MenuLib) |
 | [`src/VoteUi.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/VoteUi.cs) | HUD box, reveal reel, hotkeys |
 | [`src/UiKit.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/UiKit.cs), [`src/MapInfo.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/MapInfo.cs) | Palette, procedural sprites, per-map display data |
+| [`src/Stats.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/Stats.cs), [`src/StatsPayload.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/StatsPayload.cs) | Anonymous stats pings (host only) |
+| [`stats/`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/tree/main/stats) | The stats server and dashboard: a Cloudflare Worker with D1 |
 | [`src/Compat.cs`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/blob/main/src/Compat.cs) | Calls game methods whose signatures change between updates |
 
 ## Build
