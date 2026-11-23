@@ -19,4 +19,5 @@ database_id = "f772fe11-e1b9-4202-bf84-44bb1a315169"
 [[ratelimits]]
 name = "LIMIT"
 namespace_id = "1001"
-simple = { limit = 30, period = 60 }
+# A host sends one heartbeat per half hour and one ping per vote, so 10 a minute leaves room for a few hosts sharing an IP.
+simple = { limit = 10, period = 60 }
