@@ -50,11 +50,43 @@
   h2 { font-size: 15px; font-weight: 500; margin: 0 0 16px; }
   h3 { font-size: 13px; font-weight: 400; color: var(--muted); margin: 0 0 8px; }
   .lede { color: var(--muted); margin: 8px 0 32px; max-width: 60ch; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
   main > * + .grid, main > * + .card { margin-top: 16px; }
-  .tile small { display: block; color: var(--muted); font-size: 13px; }
-  .tile b { display: block; margin-top: 4px; font-size: 32px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px 48px; }
+  .top .lede { margin-bottom: 0; }
+  .live { display: flex; gap: 32px; margin: 0; }
+  .live dt { color: var(--muted); font-size: 13px; }
+  .live dd { margin: 0; font-size: 28px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 24px; margin: 48px 0 16px; }
+  .section-head h2 { font-size: 22px; font-weight: 600; margin: 0; }
+  .section-head p { margin: 0; color: var(--muted); }
+  .maps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+  .map { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  /* The game's level intro cards are white line art on black, so the frame stays black in both themes. */
+  .art { position: relative; aspect-ratio: 2 / 1; background: #0b0b0b; overflow: hidden; }
+  .art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; transition: transform 0.4s ease; }
+  .map:hover .art img { transform: scale(1.03); }
+  @media (prefers-reduced-motion: reduce) { .art img { transition: none; } }
+  .art.blank { display: grid; place-items: center; background: repeating-linear-gradient(135deg, #0b0b0b 0 14px, #151514 14px 28px); color: #6b665c; font: 600 44px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .rank { position: absolute; top: 12px; left: 12px; padding: 2px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.72); color: #f3eee4; font: 500 13px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .lead .rank { background: #ffb31a; color: #141414; }
+  .map .body { display: grid; gap: 12px; padding: 16px 20px 20px; }
+  .eyebrow { display: none; margin: 0 0 -8px; color: var(--muted); font-size: 13px; }
+  .lead .eyebrow { display: block; }
+  .map h3 { margin: 0; color: var(--text); font-size: 15px; font-weight: 500; }
+  .rate { display: flex; align-items: baseline; gap: 8px; }
+  .rate b { font-size: 40px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .rate small { color: var(--muted); font-size: 13px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 16px; margin: 0; font-size: 13px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+  @media (min-width: 720px) {
+    .map.lead { grid-column: 1 / -1; flex-direction: row; }
+    .map.lead .art { flex: 1.4; aspect-ratio: auto; min-height: 300px; }
+    .map.lead .body { flex: 1; align-content: center; padding: 32px; gap: 16px; }
+    .map.lead h3 { font-size: 20px; }
+    .map.lead .rate b { font-size: 72px; }
+  }
   .note, footer { color: var(--muted); font-size: 13px; }
   .note { margin: 16px 0 0; max-width: 80ch; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
@@ -80,32 +112,34 @@
   .empty { color: var(--muted); padding: 24px 0; text-align: center; }
   #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); font-size: 13px; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: none; z-index: 2; font-variant-numeric: tabular-nums; }
   footer { margin-top: 24px; }
+  footer p { margin: 0 0 4px; }
   a { color: inherit; }
 </style>
 </head>
 <body>
 <main>
-  <h1>MapVote<span>++</span> stats</h1>
-  <p class="lede">Anonymous counts from hosts running MapVote++. No IDs, names or IP addresses are stored, only totals per day. Hosts can turn it off with <code>ShareAnonymousStats</code>.</p>
+  <header class="top">
+    <div>
+      <h1>MapVote<span>++</span> stats</h1>
+      <p class="lede">Anonymous counts from hosts running MapVote++. No IDs, names or IP addresses are stored, only totals per day. Hosts can turn it off with <code>ShareAnonymousStats</code>.</p>
+    </div>
+    <dl class="live">
+      <div><dt>Games, last half hour</dt><dd id="games">–</dd></div>
+      <div><dt>Players in them</dt><dd id="players">–</dd></div>
+    </dl>
+  </header>
 
-  <div class="tiles">
-    <div class="tile"><small>Games in the last half hour</small><b id="games">–</b></div>
-    <div class="tile"><small>Players in those games</small><b id="players">–</b></div>
-    <div class="tile"><small>Votes rolled, last 30 days</small><b id="votes">–</b></div>
-  </div>
+  <div class="section-head"><h2>Map pick rate</h2><p>Share of the <span id="votes">–</span> votes rolled in the last 30 days that each map won</p></div>
+  <div id="maps" class="maps"></div>
+  <p class="note">When offered counts only the votes the map was on, which differs from pick rate when <code>MapsPerVote</code> shortens the list. Player votes is its share of every ballot cast, Random included. Base-game maps are always named. Other maps offered fewer than 20 times or on fewer than 3 days, or whose names aren't plain letters and numbers, are grouped as Other maps, so a private map never shows by name.</p>
 
+  <div class="section-head"><h2>Activity</h2></div>
   <div class="grid">
     <section class="card"><h2>Games, last 7 days</h2><div id="chart-games"></div></section>
     <section class="card"><h2>Players, last 7 days</h2><div id="chart-players"></div></section>
   </div>
 
   <section class="card"><h2>Votes rolled per day, last 30 days</h2><div id="chart-rolls"></div></section>
-
-  <section class="card">
-    <h2>Maps, last 30 days</h2>
-    <div id="maps"></div>
-    <p class="note">Win rate is wins out of the votes that offered the map. Base-game maps are always named. Other maps offered fewer than 20 times or on fewer than 3 days, or whose names aren't plain letters and numbers, are grouped as Other maps, so a private map never shows by name.</p>
-  </section>
 
   <div class="grid">
     <section class="card"><h2>How the next map was picked</h2><div id="how"></div></section>
@@ -122,7 +156,7 @@
     </div>
   </section>
 
-  <footer id="updated"></footer>
+  <footer><p id="updated"></p><p>Level art is the game's own intro cards, from R.E.P.O. by semiwork.</p></footer>
 </main>
 <div id="tip" role="status"></div>
 <script>
@@ -209,16 +243,35 @@ function bar(x, y, w, h) {
   return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
 }
 
-function maps(el, rows, random) {
+// The game's intro card for each base-game level, from public/maps. Custom maps get a blank frame.
+const ART = { "Level - Manor": "manor", "Level - Arctic": "arctic", "Level - Wizard": "wizard", "Level - Museum": "museum", "Level - Desert": "desert" };
+function art(m, rank, lead) {
+  const key = ART[m.map];
+  const glyph = m.map === "__random__" ? "?" : m.map == null ? "+" : mapLabel(m.map).slice(0, 2).toUpperCase();
+  return `<div class="art${key ? "" : " blank"}">${key ? `<img src="/maps/${key}.webp" alt="" ${lead ? "" : 'loading="lazy" '}decoding="async">` : `<span aria-hidden="true">${esc(glyph)}</span>`}
+    ${rank ? `<span class="rank">#${rank}</span>` : ""}</div>`;
+}
+const facts = (pairs) => `<dl class="facts">${pairs.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+
+// One card per map, ranked by pick rate: the share of rolled votes it won. Wins on every map add up to the votes rolled.
+function maps(el, rows, random, rolled) {
   if (!rows.length && !random) return void (el.innerHTML = '<p class="empty">No votes yet</p>');
-  const all = random ? [...rows, random] : rows;
-  const rate = (m) => m.offered ? m.wins / m.offered : 0;
-  const best = Math.max(0, ...rows.map(rate));
-  const lead = rows.find((m) => best && rate(m) === best);
-  el.innerHTML = `<table><thead><tr><th>Map</th><th class="num">Wins</th><th class="num">Offered</th><th class="num">Ballots</th><th class="bar">Win rate when offered</th><th></th></tr></thead><tbody>
-    ${all.map((m) => { const r = rate(m);
-      return `<tr${m === lead ? ' class="lead"' : ""}><td>${esc(mapLabel(m.map))}</td><td class="num">${fmt(m.wins)}</td><td class="num">${fmt(m.offered)}</td><td class="num">${fmt(m.ballots)}</td>
-        <td class="bar" style="width:30%"><div class="meter"><i style="width:${r * 100}%"></i></div></td>${m.map === "__random__" ? '<td class="num dim">–</td>' : `<td class="num">${pct(r)}</td>`}</tr>`; }).join("")}</tbody></table>`;
+  const ballots = [...rows, random].reduce((t, m) => t + (m?.ballots ?? 0), 0);
+  const share = (n, d) => d ? pct(n / d) : "–";
+  const cards = rows.map((m, i) => {
+    const lead = i === 0 && m.map != null && m.wins > 0;
+    return `<article class="map${lead ? " lead" : ""}">${art(m, m.map == null ? 0 : i + 1, lead)}<div class="body">
+      <p class="eyebrow">Most picked map</p><h3>${esc(mapLabel(m.map))}</h3>
+      <div class="rate"><b>${share(m.wins, rolled)}</b><small>pick rate</small></div>
+      <div class="meter"><i style="width:${rolled ? (m.wins / rolled) * 100 : 0}%"></i></div>
+      ${facts([["Picked", `${fmt(m.wins)} of ${fmt(rolled)}`], ["When offered", share(m.wins, m.offered)], ["Player votes", share(m.ballots, ballots)]])}</div></article>`;
+  });
+  if (random) cards.push(`<article class="map">${art(random)}<div class="body">
+      <h3>Random</h3>
+      <div class="rate"><b>${share(random.ballots, ballots)}</b><small>of player votes</small></div>
+      <p class="note" style="margin:0">A vote for Random lands on one of the maps, so its wins count there.</p>
+      ${facts([["Ballots", fmt(random.ballots)], ["Offered", fmt(random.offered)]])}</div></article>`);
+  el.innerHTML = cards.join("");
 }
 
 // Every half-hour slot of the last 7 days, up to the one still filling, with empty slots as 0.
@@ -237,11 +290,12 @@ const CONTEXT = { lobby: "Lobby menu", truck: "Truck" };
 const load = () => fetch("/v1/stats", { cache: "no-store" }).then((r) => r.json()).then((s) => {
   $("games").textContent = fmt(s.now.games);
   $("players").textContent = fmt(s.now.players);
-  $("votes").textContent = fmt(s.rolls.reduce((t, r) => t + r.n, 0));
+  const rolled = s.rolls.reduce((t, r) => t + r.n, 0);
+  $("votes").textContent = fmt(rolled);
   line($("chart-games"), slots(s.activity, 1, Date.parse(s.generated)), "games");
   line($("chart-players"), slots(s.activity, 2, Date.parse(s.generated)), "players");
   columns($("chart-rolls"), s.rolls);
-  maps($("maps"), s.maps, s.random);
+  maps($("maps"), s.maps, s.random, rolled);
   const sum = (key, names) => { const o = {}; for (const h of s.how) o[h[key]] = (o[h[key]] ?? 0) + h.n; return Object.entries(o).map(([k, n]) => [names[k] ?? k, n]); };
   shares($("how"), sum("how", HOW));
   shares($("context"), sum("context", CONTEXT));
