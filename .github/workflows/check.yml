@@ -1,5 +1,5 @@
-# Runs the vote-rule check and builds the package on every pull request and every push to main.
-# It only builds: nothing is published or uploaded.
+# Runs the vote-rule check, builds the package and checks the stats server on every pull request and every push to
+# main. Nothing is published, uploaded or deployed.
 name: Check
 
 on:
@@ -18,14 +18,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 9.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
@@ -43,7 +45,7 @@ jobs:
 
       # The build downloads MenuLib from Thunderstore into obj/thunderstore when it isn't there already.
       - name: Cache MenuLib
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: obj/thunderstore
           key: menulib-${{ steps.menulib.outputs.version }}
@@ -57,3 +59,25 @@ jobs:
       # Fails if the versions in MapVotePlusPlus.csproj, manifest.json and src/Plugin.cs don't match.
       - name: Build the package
         run: dotnet build -c Release -t:ThunderstorePackage
+
+  # Runs the Worker locally on a fresh D1 and checks what it accepts, rejects, names and caches (stats/test/e2e.sh).
+  stats:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stats
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: stats/package-lock.json
+
+      - run: npm ci
+
+      - name: Check the stats server
+        run: npm test

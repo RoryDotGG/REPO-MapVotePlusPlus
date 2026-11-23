@@ -1,6 +1,8 @@
 name = "mapvote-stats"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
+# Not a secret. CI deploys here with the CLOUDFLARE_API_TOKEN secret.
+account_id = "c8cedd8fd232d7450dba8b679b8ec6f4"
 
 # Served only at mvpp.rory.gg. Deploying creates its DNS record, which takes priority over the *.rory.gg wildcard.
 routes = [{ pattern = "mvpp.rory.gg", custom_domain = true }]
