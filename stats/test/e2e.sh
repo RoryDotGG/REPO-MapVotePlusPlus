@@ -53,6 +53,7 @@ expect named-maps 'Level - Manor|Level - Desert|OTHER' "$(field '(s) => s.maps.m
 for m in manor arctic museum desert wizard; do
   expect "art-$m" '200 image/webp' "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/maps/$m.webp")"
 done
+expect thunderstore-cta 1 "$(curl -s "$B/" | grep -c 'href="https://thunderstore.io/c/repo/p/RoryDotGG/MapVotePlusPlus/"')"
 expect cached-despite-query "$(field '(s) => s.generated' <<<"$stats")" "$(curl -s "$B/v1/stats?bust=$RANDOM" | field '(s) => s.generated')"
 
 # POSTs 8-12

@@ -54,6 +54,9 @@
   main > * + .grid, main > * + .card { margin-top: 16px; }
   .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px 48px; }
   .top .lede { margin-bottom: 0; }
+  .cta { display: inline-block; margin-top: 16px; padding: 10px 16px; border-radius: 8px; background: var(--bar); color: #141414; font-weight: 600; text-decoration: none; }
+  .cta:hover { background: var(--text); color: var(--surface); }
+  .cta:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
   .live { display: flex; gap: 32px; margin: 0; }
   .live dt { color: var(--muted); font-size: 13px; }
   .live dd { margin: 0; font-size: 28px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -122,6 +125,7 @@
     <div>
       <h1>MapVote<span>++</span> stats</h1>
       <p class="lede">Anonymous counts from hosts running MapVote++. No IDs, names or IP addresses are stored, only totals per day. Hosts can turn it off with <code>ShareAnonymousStats</code>.</p>
+      <a class="cta" href="https://thunderstore.io/c/repo/p/RoryDotGG/MapVotePlusPlus/">Get MapVote++ on Thunderstore</a>
     </div>
     <dl class="live">
       <div><dt>Games, last half hour</dt><dd id="games">–</dd></div>
