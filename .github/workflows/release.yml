@@ -1,5 +1,7 @@
-# Push a version tag (v1.2.3) to build the package, publish it to Thunderstore and make a GitHub release.
-# Needs the THUNDERSTORE_TOKEN secret: a service account token for the RoryDotGG team.
+# Push a version tag (v1.2.3) to build the package, deploy the stats server, publish to Thunderstore and make a
+# GitHub release. The server goes out before the mod, so a new version's pings never reach an old server.
+# Needs two secrets: THUNDERSTORE_TOKEN, a service account token for the RoryDotGG team, and CLOUDFLARE_API_TOKEN
+# (stats/README.md says how to make it).
 name: Release
 
 on:
@@ -9,13 +11,20 @@ on:
 permissions:
   contents: write
 
+# One release at a time, so two tags pushed together can't deploy the server out of order.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 9.0.x
 
@@ -41,6 +50,27 @@ jobs:
 
       - name: Build the package
         run: dotnet build -c Release -t:ThunderstorePackage
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # No cache in a release: a poisoned one could change what gets deployed.
+          package-manager-cache: false
+
+      - name: Check the stats server
+        working-directory: stats
+        run: |
+          npm ci
+          npm test
+
+      # schema.sql only creates what's missing, so running it every release is safe.
+      - name: Deploy the stats server
+        working-directory: stats
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx wrangler d1 execute mapvote-stats --remote --file schema.sql
+          npx wrangler deploy
 
       - name: Publish to Thunderstore
         env:

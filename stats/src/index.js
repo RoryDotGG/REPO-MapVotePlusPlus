@@ -7,14 +7,21 @@ const RANDOM = "__random__";
 const MODES = ["Lottery", "Majority"];
 const CONTEXTS = ["lobby", "truck"];
 const HOWS = ["vote", "none", "host", "hostRandom"];
+const MAX_BODY_BYTES = 8192;
+// With MapsPerVote "All" a vote offers the whole pool, so this allows big modded pools. Each offer is a D1 row written.
+const MAX_OFFERS = 100;
 // A map has to come up this often in the window before the dashboard names it, so an unreleased map stays private.
 const MIN_OFFERS_TO_NAME = 20;
+// ...and on this many days, so one burst of fake pings can't put a name on the page.
+const MIN_DAYS_TO_NAME = 3;
+// Level names look like "Level - Manor". Anything else, such as a link or emoji, is counted but only ever shown as Other maps.
+const NAMEABLE = /^[\p{L}\p{N} '&()_-]+$/u;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/v1/ping" && request.method === "POST") return ping(request, env);
-    if (url.pathname === "/v1/stats" && request.method === "GET") return json(await stats(env), 300);
+    if (url.pathname === "/v1/stats" && request.method === "GET") return cachedStats(url, env, ctx);
     if (url.pathname === "/" && request.method === "GET")
       return new Response(dashboard, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
     return new Response("Not found", { status: 404 });
@@ -26,8 +33,8 @@ async function ping(request, env) {
   const ip = request.headers.get("cf-connecting-ip") ?? "";
   if (env.LIMIT && !(await env.LIMIT.limit({ key: ip })).success) return new Response(null, { status: 429 });
 
-  const text = await request.text();
-  if (text.length > 8192) return new Response(null, { status: 413 });
+  const text = await readBody(request, MAX_BODY_BYTES);
+  if (text === null) return new Response(null, { status: 413 });
   let body;
   try {
     body = JSON.parse(text);
@@ -39,6 +46,31 @@ async function ping(request, env) {
   if (!statements) return new Response(null, { status: 400 });
   await env.DB.batch(statements);
   return new Response(null, { status: 204 });
+}
+
+/** Returns the body as text, or null if it's over max bytes. Stops reading there, so a huge body is never buffered. */
+async function readBody(request, max) {
+  if (Number(request.headers.get("content-length")) > max) return null;
+  if (!request.body) return "";
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request.body) {
+    size += chunk.byteLength;
+    if (size > max) return null;
+    chunks.push(chunk);
+  }
+  return new Blob(chunks).text();
+}
+
+/** Worker responses skip Cloudflare's cache, so each data centre keeps the stats for 5 minutes instead of asking D1 per load. */
+async function cachedStats(url, env, ctx) {
+  // One key whatever the query string, so ?x=1, ?x=2... can't force fresh D1 reads.
+  const key = new Request(`${url.origin}/v1/stats`);
+  const hit = await caches.default.match(key);
+  if (hit) return hit;
+  const response = json(await stats(env), 300);
+  ctx.waitUntil(caches.default.put(key, response.clone()));
+  return response;
 }
 
 /** Returns the D1 statements for a valid heartbeat, or null. */
@@ -60,13 +92,13 @@ function vote(env, b, now = Date.now()) {
   if (!common(b) || !CONTEXTS.includes(b.context) || !HOWS.includes(b.how)) return null;
   if (!b.offers || typeof b.offers !== "object" || Array.isArray(b.offers)) return null;
   const offers = Object.entries(b.offers);
-  if (offers.length < 1 || offers.length > 200) return null;
+  if (offers.length < 1 || offers.length > MAX_OFFERS) return null;
   let total = 0;
   for (const [map, ballots] of offers) {
     if (!mapName(map) || !int(ballots, 0, b.players)) return null;
     total += ballots;
   }
-  if (total > b.players || !mapName(b.winner) || b.winner === RANDOM || !(b.winner in b.offers)) return null;
+  if (total > b.players || !mapName(b.winner) || b.winner === RANDOM || !Object.hasOwn(b.offers, b.winner)) return null;
 
   const d = day(now);
   const statements = [
@@ -108,7 +140,7 @@ async function stats(env, now = Date.now()) {
   const [activity, offers, wins, how, rolls, settings] = (
     await env.DB.batch([
       q("SELECT slot, games, players FROM activity WHERE slot >= ?1 ORDER BY slot", slot - 7 * 48),
-      q("SELECT map, SUM(offered) AS offered, SUM(ballots) AS ballots FROM offers WHERE day >= ?1 GROUP BY map", since30),
+      q("SELECT map, SUM(offered) AS offered, SUM(ballots) AS ballots, COUNT(*) AS days FROM offers WHERE day >= ?1 GROUP BY map", since30),
       q("SELECT map, SUM(n) AS wins FROM picks WHERE day >= ?1 GROUP BY map", since30),
       q("SELECT context, how, SUM(n) AS n FROM picks WHERE day >= ?1 GROUP BY context, how", since30),
       q("SELECT day, SUM(n) AS n FROM picks WHERE day >= ?1 GROUP BY day ORDER BY day", since30),
@@ -126,7 +158,7 @@ async function stats(env, now = Date.now()) {
   for (const o of offers) {
     const row = { map: o.map, offered: o.offered, ballots: o.ballots, wins: winsByMap[o.map] ?? 0 };
     if (o.map === RANDOM) random = row;
-    else if (o.offered >= MIN_OFFERS_TO_NAME) maps.push(row);
+    else if (o.offered >= MIN_OFFERS_TO_NAME && o.days >= MIN_DAYS_TO_NAME && NAMEABLE.test(o.map)) maps.push(row);
     else for (const k of ["offered", "ballots", "wins"]) other[k] += row[k];
   }
   maps.sort((a, b) => b.wins - a.wins || b.offered - a.offered);

@@ -108,7 +108,7 @@ What a host sends:
 - **Once every half hour while you're in a game:** the mod version, how many players are in it, and your `VoteMode`, `MapsPerVote` and `RecentMapsToSkip`.
 - **Each time a vote rolls:** the map that won, whether it was the lobby or the truck vote, how it was won (votes, nobody voted, host's pick), how many votes each offered map got, and how many players there were.
 
-What's never sent or kept: IDs of any kind, player or Steam names, lobby codes, chat, or anything else about you or your game. The stats server doesn't read or store IP addresses. It adds each ping to totals per day (per half hour for games and players) and throws the ping away, so there's no record of any one game to leak. Maps offered fewer than 20 times in 30 days are grouped as "Other maps" on the page, so a private map never shows by name.
+What's never sent or kept: IDs of any kind, player or Steam names, lobby codes, chat, or anything else about you or your game. The stats server doesn't read or store IP addresses. It adds each ping to totals per day (per half hour for games and players) and throws the ping away, so there's no record of any one game to leak. Maps offered fewer than 20 times or on fewer than 3 days in the last 30, or whose names aren't plain letters and numbers, are grouped as "Other maps" on the page, so a private map never shows by name.
 
 To see exactly what your game sends, set `LogLevels` to include `Debug` in `BepInEx/config/BepInEx.cfg`. Each ping is written to the log as `Anonymous stats: {...}`. The server code is in [`stats/`](https://github.com/RoryDotGG/REPO-MapVotePlusPlus/tree/main/stats).
 

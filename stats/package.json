@@ -6,7 +6,8 @@
     "dev": "wrangler dev",
     "db:local": "wrangler d1 execute mapvote-stats --local --file schema.sql",
     "db:remote": "wrangler d1 execute mapvote-stats --remote --file schema.sql",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "bash test/e2e.sh"
   },
   "devDependencies": {
     "wrangler": "4.166.0"
