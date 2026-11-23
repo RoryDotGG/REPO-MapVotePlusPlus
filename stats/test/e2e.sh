@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the Worker with `wrangler dev` on a fresh local D1 and checks what it accepts, rejects, names and caches.
+# Runs the Worker with `wrangler dev` on a fresh local D1 and checks what it accepts, rejects, names, caches and serves.
 # Usage: npm test (from stats/). Exits non-zero if any check fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -49,6 +49,10 @@ expect big-chunked 413 "$(post -H 'transfer-encoding: chunked' --data-binary @"$
 
 stats=$(curl -s "$B/v1/stats")
 expect named-maps 'Level - Manor|Level - Desert|OTHER' "$(field '(s) => s.maps.map((m) => m.map ?? "OTHER").join("|")' <<<"$stats")"
+# Level art is served from public/ for each base-game map the dashboard names.
+for m in manor arctic museum desert wizard; do
+  expect "art-$m" '200 image/webp' "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/maps/$m.webp")"
+done
 expect cached-despite-query "$(field '(s) => s.generated' <<<"$stats")" "$(curl -s "$B/v1/stats?bust=$RANDOM" | field '(s) => s.generated')"
 
 # POSTs 8-12

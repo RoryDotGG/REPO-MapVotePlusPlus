@@ -8,6 +8,10 @@ account_id = "c8cedd8fd232d7450dba8b679b8ec6f4"
 routes = [{ pattern = "mvpp.rory.gg", custom_domain = true }]
 workers_dev = false
 
+# Level art for the dashboard, served straight from public/ before the Worker runs. public/_headers sets the caching.
+[assets]
+directory = "./public"
+
 # No request logs: they would hold IP addresses.
 [observability]
 enabled = false

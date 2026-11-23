@@ -1,6 +1,6 @@
 # MapVote++ stats server
 
-A Cloudflare Worker with a D1 database, served at https://mvpp.rory.gg. It takes the anonymous pings hosts send (`POST /v1/ping`), adds them to totals and serves the dashboard (`/`) and its data (`/v1/stats`). [`schema.sql`](schema.sql) is everything it keeps. The README's [Anonymous stats](../README.md#anonymous-stats) section says what hosts send.
+A Cloudflare Worker with a D1 database, served at https://mvpp.rory.gg. It takes the anonymous pings hosts send (`POST /v1/ping`), adds them to totals and serves the dashboard (`/`), its data (`/v1/stats`) and the level art in [`public/maps`](public/maps), the game's own intro cards. [`schema.sql`](schema.sql) is everything it keeps. The README's [Anonymous stats](../README.md#anonymous-stats) section says what hosts send.
 
 ## Run it locally
 
@@ -10,7 +10,7 @@ npm run db:local
 npm run dev
 ```
 
-The dashboard is at http://127.0.0.1:8787. `npm test` runs the Worker on a fresh local database and checks what it accepts, rejects, names and caches. CI runs it on every pull request.
+The dashboard is at http://127.0.0.1:8787. `npm test` runs the Worker on a fresh local database and checks what it accepts, rejects, names, caches and serves. CI runs it on every pull request.
 
 ## Deploy
 
