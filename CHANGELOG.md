@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- When you host, MapVote++ now sends anonymous counts to a public stats page: how many players are in your game, which map each vote picked and how, and your vote settings. Nothing that identifies you, your game or your players is sent or kept. Turn it off with the new `ShareAnonymousStats` setting. The README's [Anonymous stats](https://github.com/RoryDotGG/REPO-MapVotePlusPlus#anonymous-stats) section lists exactly what is sent.
+
 ## 1.2.0
 
 - The host can choose how the votes pick the next map with the new `VoteMode` setting. **Lottery** works as before: each vote is a ticket, so 3 votes to 1 is a 75% chance. With **Majority**, the map with the most votes wins, and a tie is drawn at random between the tied maps.

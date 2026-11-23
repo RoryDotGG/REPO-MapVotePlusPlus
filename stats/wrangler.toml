@@ -1,0 +1,23 @@
+name = "mapvote-stats"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# Served only at mvpp.rory.gg. Deploying creates its DNS record, which takes priority over the *.rory.gg wildcard.
+routes = [{ pattern = "mvpp.rory.gg", custom_domain = true }]
+workers_dev = false
+
+# No request logs: they would hold IP addresses.
+[observability]
+enabled = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mapvote-stats"
+# Set this to the id `npx wrangler d1 create mapvote-stats` prints. Local dev doesn't need it.
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# Flood guard. Cloudflare counts per IP in memory for the period; the Worker never stores the IP.
+[[ratelimits]]
+name = "LIMIT"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }

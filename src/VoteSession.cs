@@ -466,6 +466,7 @@ internal static class VoteSession
         _deadline = Time.unscaledTime + RevealSeconds;
         Plugin.Log.LogInfo($"{how}; next map: {winner}");
         Broadcast();
+        Stats.Rolled(winner, Context, HostPick, Candidates, Votes.Values);
     }
 
     private static void Lock()

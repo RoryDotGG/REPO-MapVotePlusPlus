@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/VoteLogic.cs" />
+    <Compile Include="../../src/StatsPayload.cs" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MapVote++ Stats</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fbfaf7;
+    --panel: #ffffff;
+    --line: #e6e2d9;
+    --text: #141414;
+    --muted: #615c52;
+    --bar: #c98500;
+    --bar-soft: #f1dfb5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface: #141414;
+      --panel: #1c1c1b;
+      --line: #2f2e2b;
+      --text: #f3eee4;
+      --muted: #a39d90;
+      --bar: #ffb31a;
+      --bar-soft: #4a3a14;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #141414;
+    --panel: #1c1c1b;
+    --line: #2f2e2b;
+    --text: #f3eee4;
+    --muted: #a39d90;
+    --bar: #ffb31a;
+    --bar-soft: #4a3a14;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--bar); }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .lede { color: var(--muted); margin: 6px 0 28px; max-width: 60ch; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .tile b { display: block; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tile small, .note { color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 12px; margin-bottom: 12px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis { fill: var(--muted); font-size: 11px; }
+  .grid-line { stroke: var(--line); stroke-width: 1; }
+  .plot-line { fill: none; stroke: var(--bar); stroke-width: 2; stroke-linejoin: round; }
+  .cross { stroke: var(--muted); stroke-width: 1; }
+  .dot { fill: var(--bar); stroke: var(--panel); stroke-width: 2; }
+  .col { fill: var(--bar); }
+  .col:hover, .col.on { fill: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 13px; padding: 0 8px 6px 0; }
+  td { padding: 5px 8px 5px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .meter { position: relative; height: 10px; min-width: 60px; background: var(--bar-soft); border-radius: 4px; }
+  .meter i { position: absolute; inset: 0 auto 0 0; background: var(--bar); border-radius: 4px; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); font-size: 13px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; display: none; z-index: 2; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 24px; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MapVote<span>++</span> stats</h1>
+  <p class="lede">Anonymous counts from hosts running MapVote++. No IDs, names or IP addresses are stored, only totals per day. Hosts can turn it off with <code>ShareAnonymousStats</code>.</p>
+
+  <div class="tiles">
+    <div class="tile"><b id="games">–</b><small>games in the last half hour</small></div>
+    <div class="tile"><b id="players">–</b><small>players in those games</small></div>
+    <div class="tile"><b id="votes">–</b><small>votes rolled, last 30 days</small></div>
+  </div>
+
+  <div class="grid">
+    <section class="card"><h2>Games, last 7 days</h2><div id="chart-games"></div></section>
+    <section class="card"><h2>Players, last 7 days</h2><div id="chart-players"></div></section>
+  </div>
+
+  <section class="card" style="margin-bottom:12px"><h2>Votes rolled per day, last 30 days</h2><div id="chart-rolls"></div></section>
+
+  <section class="card" style="margin-bottom:12px">
+    <h2>Maps, last 30 days</h2>
+    <div id="maps"></div>
+    <p class="note">Win rate is wins out of the votes that offered the map. Maps offered fewer than 20 times are grouped as Other maps, so a private map never shows by name.</p>
+  </section>
+
+  <div class="grid">
+    <section class="card"><h2>How the next map was picked</h2><div id="how"></div></section>
+    <section class="card"><h2>Where the vote was</h2><div id="context"></div></section>
+  </div>
+
+  <div class="grid">
+    <section class="card"><h2>Mod version, last 7 days</h2><div id="versions"></div></section>
+    <section class="card"><h2>VoteMode, last 7 days</h2><div id="modes"></div></section>
+    <section class="card"><h2>MapsPerVote, last 7 days</h2><div id="mpv"></div></section>
+    <section class="card"><h2>RecentMapsToSkip, last 7 days</h2><div id="skip"></div></section>
+  </div>
+
+  <footer id="updated"></footer>
+</main>
+<div id="tip" role="status"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("en-GB");
+const pct = (n) => `${Math.round(n * 100)}%`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const mapLabel = (m) => m == null ? "Other maps" : m === "__random__" ? "Random" : m.replace(/^Level - /i, "");
+const tip = $("tip");
+function showTip(e, text) { tip.textContent = text; tip.style.display = "block"; tip.style.left = `${e.clientX + 12}px`; tip.style.top = `${e.clientY - 34}px`; }
+function hideTip() { tip.style.display = "none"; }
+
+// A share list: label, count, share of the total as a meter. The numbers are text, so it reads as a table too.
+function shares(el, rows) {
+  const total = rows.reduce((s, r) => s + r[1], 0);
+  if (!total) return void (el.innerHTML = '<p class="empty">No data yet</p>');
+  rows.sort((a, b) => b[1] - a[1]);
+  el.innerHTML = `<table><tbody>${rows.map(([label, n]) => `<tr><td>${esc(label)}</td>
+    <td style="width:45%"><div class="meter"><i style="width:${(n / total) * 100}%"></i></div></td>
+    <td class="num">${fmt(n)}</td><td class="num">${pct(n / total)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+// Line over time with a crosshair. points: [[ms, value], ...] at even spacing.
+function line(el, points, unit) {
+  const W = 460, H = 160, L = 34, B = 20, T = 6;
+  if (!points.length) return void (el.innerHTML = '<p class="empty">No data yet</p>');
+  const t0 = points[0][0], t1 = points[points.length - 1][0] || t0 + 1;
+  const max = Math.max(1, ...points.map((p) => p[1]));
+  const x = (t) => L + ((t - t0) / Math.max(1, t1 - t0)) * (W - L);
+  const y = (v) => T + (1 - v / max) * (H - T - B);
+  const ticks = [0, Math.round(max / 2), max].filter((v, i, a) => a.indexOf(v) === i);
+  const days = [];
+  for (let d = new Date(t0); d <= t1; d.setUTCDate(d.getUTCDate() + 1)) { const m = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); if (m >= t0) days.push(m); }
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${unit} over the last 7 days, peak ${max}">
+    ${ticks.map((v) => `<line class="grid-line" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+    ${days.map((d) => `<text class="axis" x="${x(d)}" y="${H - 4}" text-anchor="middle">${new Date(d).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</text>`).join("")}
+    <polyline class="plot-line" points="${points.map((p) => `${x(p[0])},${y(p[1])}`).join(" ")}"/>
+    <line class="cross" y1="${T}" y2="${H - B}" style="display:none"/><circle class="dot" r="4" style="display:none"/>
+    <rect x="${L}" y="0" width="${W - L}" height="${H - B}" fill="transparent"/></svg>`;
+  const svg = el.querySelector("svg"), cross = svg.querySelector(".cross"), dot = svg.querySelector(".dot");
+  svg.querySelector("rect").addEventListener("mousemove", (e) => {
+    const r = svg.getBoundingClientRect();
+    const t = t0 + (((e.clientX - r.left) / r.width) * W - L) / (W - L) * (t1 - t0);
+    const p = points.reduce((a, b) => Math.abs(b[0] - t) < Math.abs(a[0] - t) ? b : a);
+    cross.setAttribute("x1", x(p[0])); cross.setAttribute("x2", x(p[0])); cross.style.display = "";
+    dot.setAttribute("cx", x(p[0])); dot.setAttribute("cy", y(p[1])); dot.style.display = "";
+    showTip(e, `${new Date(p[0]).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC · ${fmt(p[1])} ${unit}`);
+  });
+  svg.querySelector("rect").addEventListener("mouseleave", () => { cross.style.display = dot.style.display = "none"; hideTip(); });
+}
+
+// Columns per day, zero days included so gaps show.
+function columns(el, rows) {
+  const W = 920, H = 150, L = 34, B = 20, T = 6;
+  const byDay = Object.fromEntries(rows.map((r) => [r.day, r.n]));
+  const days = [];
+  for (let i = 29; i >= 0; i--) days.push(new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+  const max = Math.max(1, ...days.map((d) => byDay[d] ?? 0));
+  const step = (W - L) / days.length, w = step - 2;
+  const y = (v) => T + (1 - v / max) * (H - T - B);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Votes rolled per day, peak ${max}">
+    <line class="grid-line" x1="${L}" x2="${W}" y1="${y(0)}" y2="${y(0)}"/><line class="grid-line" x1="${L}" x2="${W}" y1="${y(max)}" y2="${y(max)}"/>
+    <text class="axis" x="${L - 6}" y="${y(0) + 4}" text-anchor="end">0</text><text class="axis" x="${L - 6}" y="${y(max) + 4}" text-anchor="end">${max}</text>
+    ${days.map((d, i) => { const v = byDay[d] ?? 0, h = Math.max(v ? 2 : 0, y(0) - y(v));
+      return `<path class="col" data-i="${i}" d="${bar(L + i * step + 1, y(0) - h, w, h)}"/>`
+        + (i % 7 === 0 ? `<text class="axis" x="${L + i * step + step / 2}" y="${H - 4}" text-anchor="middle">${new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</text>` : ""); }).join("")}
+    <rect x="${L}" y="0" width="${W - L}" height="${H - B}" fill="transparent"/></svg>`;
+  const svg = el.querySelector("svg"), cols = svg.querySelectorAll(".col");
+  svg.querySelector("rect").addEventListener("mousemove", (e) => {
+    const r = svg.getBoundingClientRect();
+    const i = Math.min(days.length - 1, Math.max(0, Math.floor((((e.clientX - r.left) / r.width) * W - L) / step)));
+    cols.forEach((c) => c.classList.toggle("on", +c.dataset.i === i));
+    showTip(e, `${new Date(days[i]).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${fmt(byDay[days[i]] ?? 0)} votes`);
+  });
+  svg.querySelector("rect").addEventListener("mouseleave", () => { cols.forEach((c) => c.classList.remove("on")); hideTip(); });
+}
+
+// A column with a 4px rounded top and a square foot on the baseline.
+function bar(x, y, w, h) {
+  if (h <= 0) return "";
+  const r = Math.min(4, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+function maps(el, rows, random) {
+  if (!rows.length && !random) return void (el.innerHTML = '<p class="empty">No votes yet</p>');
+  const all = random ? [...rows, random] : rows;
+  el.innerHTML = `<table><thead><tr><th>Map</th><th class="num">Wins</th><th class="num">Offered</th><th class="num">Ballots</th><th>Win rate when offered</th><th></th></tr></thead><tbody>
+    ${all.map((m) => { const rate = m.offered ? m.wins / m.offered : 0;
+      return `<tr><td>${esc(mapLabel(m.map))}</td><td class="num">${fmt(m.wins)}</td><td class="num">${fmt(m.offered)}</td><td class="num">${fmt(m.ballots)}</td>
+        <td style="width:30%"><div class="meter"><i style="width:${rate * 100}%"></i></div></td><td class="num">${m.map === "__random__" ? "–" : pct(rate)}</td></tr>`; }).join("")}</tbody></table>`;
+}
+
+const HOW = { vote: "The votes", none: "Nobody voted (random)", host: "Host's pick", hostRandom: "Host rolled Random" };
+const CONTEXT = { lobby: "Lobby menu", truck: "Truck" };
+
+fetch("/v1/stats").then((r) => r.json()).then((s) => {
+  $("games").textContent = fmt(s.now.games);
+  $("players").textContent = fmt(s.now.players);
+  $("votes").textContent = fmt(s.rolls.reduce((t, r) => t + r.n, 0));
+  line($("chart-games"), s.activity.map((a) => [a[0], a[1]]), "games");
+  line($("chart-players"), s.activity.map((a) => [a[0], a[2]]), "players");
+  columns($("chart-rolls"), s.rolls);
+  maps($("maps"), s.maps, s.random);
+  const sum = (key, names) => { const o = {}; for (const h of s.how) o[h[key]] = (o[h[key]] ?? 0) + h.n; return Object.entries(o).map(([k, n]) => [names[k] ?? k, n]); };
+  shares($("how"), sum("how", HOW));
+  shares($("context"), sum("context", CONTEXT));
+  shares($("versions"), Object.entries(s.versions));
+  shares($("modes"), Object.entries(s.modes));
+  shares($("mpv"), Object.entries(s.mapsPerVote).map(([k, n]) => [k === "0" ? "All" : k, n]));
+  shares($("skip"), Object.entries(s.recentSkip));
+  $("updated").textContent = `Updated ${new Date(s.generated).toLocaleString("en-GB")}. Refreshes every 5 minutes.`;
+}).catch(() => { $("updated").textContent = "Couldn't load the stats. Try again in a minute."; });
+</script>
+</body>
+</html>
