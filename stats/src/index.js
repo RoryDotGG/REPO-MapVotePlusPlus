@@ -24,7 +24,8 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/v1/ping" && request.method === "POST") return ping(request, env);
     if (url.pathname === "/v1/stats" && request.method === "GET") return cachedStats(url, env, ctx);
-    if (url.pathname === "/" && request.method === "GET")
+    // HEAD too: some link unfurlers and checkers probe with it before fetching.
+    if (url.pathname === "/" && (request.method === "GET" || request.method === "HEAD"))
       return new Response(dashboard, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
     return new Response("Not found", { status: 404 });
   },

@@ -53,6 +53,12 @@ expect named-maps 'Level - Manor|Level - Desert|OTHER' "$(field '(s) => s.maps.m
 for m in manor arctic museum desert wizard; do
   expect "art-$m" '200 image/webp' "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/maps/$m.webp")"
 done
+# Social previews: absolute image URL, the image itself, and HEAD on the page.
+expect og-image 1 "$(curl -s "$B/" | grep -c '<meta property="og:image" content="https://mvpp.rory.gg/og.png">')"
+expect twitter-card 1 "$(curl -s "$B/" | grep -c '<meta name="twitter:card" content="summary_large_image">')"
+expect og-png '200 image/png' "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/og.png")"
+expect icon-png '200 image/png' "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$B/icon.png")"
+expect head-dashboard 200 "$(curl -s -o /dev/null -I -w '%{http_code}' "$B/")"
 expect thunderstore-cta 1 "$(curl -s "$B/" | grep -c 'href="https://thunderstore.io/c/repo/p/RoryDotGG/MapVotePlusPlus/"')"
 expect cached-despite-query "$(field '(s) => s.generated' <<<"$stats")" "$(curl -s "$B/v1/stats?bust=$RANDOM" | field '(s) => s.generated')"
 
