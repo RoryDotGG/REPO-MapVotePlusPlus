@@ -13,7 +13,8 @@
     --text: #141414;
     --muted: #615c52;
     --bar: #c98500;
-    --bar-soft: #f1dfb5;
+    --track: #efece5;
+    --fill: #c4bdaf;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -24,7 +25,8 @@
       --text: #f3eee4;
       --muted: #a39d90;
       --bar: #ffb31a;
-      --bar-soft: #4a3a14;
+      --track: #262523;
+      --fill: #57534b;
     }
   }
   :root[data-theme="dark"] {
@@ -35,22 +37,30 @@
     --text: #f3eee4;
     --muted: #a39d90;
     --bar: #ffb31a;
-    --bar-soft: #4a3a14;
+    --track: #262523;
+    --fill: #57534b;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--surface); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 28px; margin: 0; letter-spacing: -0.01em; }
+  body { margin: 0; background: var(--surface); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  code, .key { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
+  code { background: var(--track); border-radius: 4px; padding: 0 4px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 28px; font-weight: 600; line-height: 1.2; margin: 0; }
   h1 span { color: var(--bar); }
-  h2 { font-size: 15px; margin: 0 0 12px; }
-  .lede { color: var(--muted); margin: 6px 0 28px; max-width: 60ch; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
-  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-  .tile b { display: block; font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; }
-  .tile small, .note { color: var(--muted); font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 12px; margin-bottom: 12px; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 16px; }
+  h3 { font-size: 13px; font-weight: 400; color: var(--muted); margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 8px 0 32px; max-width: 60ch; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  main > * + .grid, main > * + .card { margin-top: 16px; }
+  .tile small { display: block; color: var(--muted); font-size: 13px; }
+  .tile b { display: block; margin-top: 4px; font-size: 32px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .note, footer { color: var(--muted); font-size: 13px; }
+  .note { margin: 16px 0 0; max-width: 80ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 24px 32px; }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .axis { fill: var(--muted); font-size: 11px; }
+  .axis { fill: var(--muted); font: 11px ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   .grid-line { stroke: var(--line); stroke-width: 1; }
   .plot-line { fill: none; stroke: var(--bar); stroke-width: 2; stroke-linejoin: round; }
   .cross { stroke: var(--muted); stroke-width: 1; }
@@ -58,14 +68,18 @@
   .col { fill: var(--bar); }
   .col:hover, .col.on { fill: var(--text); }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 13px; padding: 0 8px 6px 0; }
-  td { padding: 5px 8px 5px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+  th { text-align: left; font-weight: 400; color: var(--muted); font-size: 13px; padding: 0 8px 8px 0; }
+  td { padding: 8px 8px 8px 0; border-top: 1px solid var(--line); vertical-align: middle; }
   td.num, th.num { text-align: right; white-space: nowrap; }
-  .meter { position: relative; height: 10px; min-width: 60px; background: var(--bar-soft); border-radius: 4px; }
-  .meter i { position: absolute; inset: 0 auto 0 0; background: var(--bar); border-radius: 4px; }
+  td.dim { color: var(--muted); }
+  th.bar, td.bar { padding-left: 16px; }
+  @media (max-width: 560px) { th.bar, td.bar { display: none; } }
+  .meter { position: relative; height: 6px; min-width: 48px; background: var(--track); border-radius: 3px; }
+  .meter i { position: absolute; inset: 0 auto 0 0; background: var(--fill); border-radius: 3px; }
+  .lead .meter i { background: var(--bar); }
   .empty { color: var(--muted); padding: 24px 0; text-align: center; }
-  #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); font-size: 13px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; display: none; z-index: 2; }
-  footer { color: var(--muted); font-size: 13px; margin-top: 24px; }
+  #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); font-size: 13px; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: none; z-index: 2; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 24px; }
   a { color: inherit; }
 </style>
 </head>
@@ -75,9 +89,9 @@
   <p class="lede">Anonymous counts from hosts running MapVote++. No IDs, names or IP addresses are stored, only totals per day. Hosts can turn it off with <code>ShareAnonymousStats</code>.</p>
 
   <div class="tiles">
-    <div class="tile"><b id="games">–</b><small>games in the last half hour</small></div>
-    <div class="tile"><b id="players">–</b><small>players in those games</small></div>
-    <div class="tile"><b id="votes">–</b><small>votes rolled, last 30 days</small></div>
+    <div class="tile"><small>Games in the last half hour</small><b id="games">–</b></div>
+    <div class="tile"><small>Players in those games</small><b id="players">–</b></div>
+    <div class="tile"><small>Votes rolled, last 30 days</small><b id="votes">–</b></div>
   </div>
 
   <div class="grid">
@@ -85,9 +99,9 @@
     <section class="card"><h2>Players, last 7 days</h2><div id="chart-players"></div></section>
   </div>
 
-  <section class="card" style="margin-bottom:12px"><h2>Votes rolled per day, last 30 days</h2><div id="chart-rolls"></div></section>
+  <section class="card"><h2>Votes rolled per day, last 30 days</h2><div id="chart-rolls"></div></section>
 
-  <section class="card" style="margin-bottom:12px">
+  <section class="card">
     <h2>Maps, last 30 days</h2>
     <div id="maps"></div>
     <p class="note">Win rate is wins out of the votes that offered the map. Base-game maps are always named. Other maps offered fewer than 20 times or on fewer than 3 days, or whose names aren't plain letters and numbers, are grouped as Other maps, so a private map never shows by name.</p>
@@ -98,12 +112,15 @@
     <section class="card"><h2>Where the vote was</h2><div id="context"></div></section>
   </div>
 
-  <div class="grid">
-    <section class="card"><h2>Mod version, last 7 days</h2><div id="versions"></div></section>
-    <section class="card"><h2>VoteMode, last 7 days</h2><div id="modes"></div></section>
-    <section class="card"><h2>MapsPerVote, last 7 days</h2><div id="mpv"></div></section>
-    <section class="card"><h2>RecentMapsToSkip, last 7 days</h2><div id="skip"></div></section>
-  </div>
+  <section class="card">
+    <h2>Host settings, last 7 days</h2>
+    <div class="settings">
+      <div><h3>Mod version</h3><div id="versions"></div></div>
+      <div><h3 class="key">VoteMode</h3><div id="modes"></div></div>
+      <div><h3 class="key">MapsPerVote</h3><div id="mpv"></div></div>
+      <div><h3 class="key">RecentMapsToSkip</h3><div id="skip"></div></div>
+    </div>
+  </section>
 
   <footer id="updated"></footer>
 </main>
@@ -125,8 +142,8 @@ function shares(el, rows) {
   const total = rows.reduce((s, r) => s + r[1], 0);
   if (!total) return void (el.innerHTML = '<p class="empty">No data yet</p>');
   rows.sort((a, b) => b[1] - a[1]);
-  el.innerHTML = `<table><tbody>${rows.map(([label, n]) => `<tr><td>${esc(label)}</td>
-    <td style="width:45%"><div class="meter"><i style="width:${(n / total) * 100}%"></i></div></td>
+  el.innerHTML = `<table><tbody>${rows.map(([label, n], i) => `<tr${i ? "" : ' class="lead"'}><td>${esc(label)}</td>
+    <td style="width:40%"><div class="meter"><i style="width:${(n / total) * 100}%"></i></div></td>
     <td class="num">${fmt(n)}</td><td class="num">${pct(n / total)}</td></tr>`).join("")}</tbody></table>`;
 }
 
@@ -195,10 +212,22 @@ function bar(x, y, w, h) {
 function maps(el, rows, random) {
   if (!rows.length && !random) return void (el.innerHTML = '<p class="empty">No votes yet</p>');
   const all = random ? [...rows, random] : rows;
-  el.innerHTML = `<table><thead><tr><th>Map</th><th class="num">Wins</th><th class="num">Offered</th><th class="num">Ballots</th><th>Win rate when offered</th><th></th></tr></thead><tbody>
-    ${all.map((m) => { const rate = m.offered ? m.wins / m.offered : 0;
-      return `<tr><td>${esc(mapLabel(m.map))}</td><td class="num">${fmt(m.wins)}</td><td class="num">${fmt(m.offered)}</td><td class="num">${fmt(m.ballots)}</td>
-        <td style="width:30%"><div class="meter"><i style="width:${rate * 100}%"></i></div></td><td class="num">${m.map === "__random__" ? "–" : pct(rate)}</td></tr>`; }).join("")}</tbody></table>`;
+  const rate = (m) => m.offered ? m.wins / m.offered : 0;
+  const best = Math.max(0, ...rows.map(rate));
+  const lead = rows.find((m) => best && rate(m) === best);
+  el.innerHTML = `<table><thead><tr><th>Map</th><th class="num">Wins</th><th class="num">Offered</th><th class="num">Ballots</th><th class="bar">Win rate when offered</th><th></th></tr></thead><tbody>
+    ${all.map((m) => { const r = rate(m);
+      return `<tr${m === lead ? ' class="lead"' : ""}><td>${esc(mapLabel(m.map))}</td><td class="num">${fmt(m.wins)}</td><td class="num">${fmt(m.offered)}</td><td class="num">${fmt(m.ballots)}</td>
+        <td class="bar" style="width:30%"><div class="meter"><i style="width:${r * 100}%"></i></div></td>${m.map === "__random__" ? '<td class="num dim">–</td>' : `<td class="num">${pct(r)}</td>`}</tr>`; }).join("")}</tbody></table>`;
+}
+
+// Every half-hour slot of the last 7 days, up to the one still filling, with empty slots as 0.
+const SLOT = 30 * 60 * 1000;
+function slots(activity, col, at) {
+  const got = new Map(activity.map((a) => [a[0], a[col]]));
+  const last = Math.floor(at / SLOT) * SLOT, out = [];
+  for (let t = last - (7 * 48 - 1) * SLOT; t <= last; t += SLOT) out.push([t, got.get(t) ?? 0]);
+  return out;
 }
 
 const HOW = { vote: "The votes", none: "Nobody voted (random)", host: "Host's pick", hostRandom: "Host rolled Random" };
@@ -209,8 +238,8 @@ const load = () => fetch("/v1/stats", { cache: "no-store" }).then((r) => r.json(
   $("games").textContent = fmt(s.now.games);
   $("players").textContent = fmt(s.now.players);
   $("votes").textContent = fmt(s.rolls.reduce((t, r) => t + r.n, 0));
-  line($("chart-games"), s.activity.map((a) => [a[0], a[1]]), "games");
-  line($("chart-players"), s.activity.map((a) => [a[0], a[2]]), "players");
+  line($("chart-games"), slots(s.activity, 1, Date.parse(s.generated)), "games");
+  line($("chart-players"), slots(s.activity, 2, Date.parse(s.generated)), "players");
   columns($("chart-rolls"), s.rolls);
   maps($("maps"), s.maps, s.random);
   const sum = (key, names) => { const o = {}; for (const h of s.how) o[h[key]] = (o[h[key]] ?? 0) + h.n; return Object.entries(o).map(([k, n]) => [names[k] ?? k, n]); };
@@ -220,8 +249,8 @@ const load = () => fetch("/v1/stats", { cache: "no-store" }).then((r) => r.json(
   shares($("modes"), Object.entries(s.modes));
   shares($("mpv"), Object.entries(s.mapsPerVote).map(([k, n]) => [k === "0" ? "All" : k, n]));
   shares($("skip"), Object.entries(s.recentSkip));
-  $("updated").textContent = `Updated ${new Date(s.generated).toLocaleString("en-GB")}. Refreshes every 5 minutes.`;
-}).catch(() => { $("updated").textContent = "Couldn't load the stats. Trying again in 5 minutes."; });
+  $("updated").textContent = `Updated ${new Date(s.generated).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · refreshes every 5 minutes`;
+}).catch(() => { $("updated").textContent = "Couldn't load the stats, trying again in 5 minutes"; });
 load();
 setInterval(load, 5 * 60 * 1000);
 </script>
