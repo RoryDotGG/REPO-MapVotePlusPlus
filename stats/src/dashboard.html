@@ -113,7 +113,9 @@ const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString("en-GB");
 const pct = (n) => `${Math.round(n * 100)}%`;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const mapLabel = (m) => m == null ? "Other maps" : m === "__random__" ? "Random" : m.replace(/^Level - /i, "");
+// In-game names for the base-game levels. Custom maps show their level name without the "Level - " prefix.
+const BASE_GAME = { "Level - Manor": "Headman Manor", "Level - Arctic": "McJannek Station", "Level - Wizard": "Swiftbroom Academy", "Level - Museum": "Museum of Human Art", "Level - Desert": "Sunstone Valley Resort" };
+const mapLabel = (m) => m == null ? "Other maps" : m === "__random__" ? "Random" : Object.hasOwn(BASE_GAME, m) ? BASE_GAME[m] : m.replace(/^Level - /i, "");
 const tip = $("tip");
 function showTip(e, text) { tip.textContent = text; tip.style.display = "block"; tip.style.left = `${e.clientX + 12}px`; tip.style.top = `${e.clientY - 34}px`; }
 function hideTip() { tip.style.display = "none"; }
