@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 - When you host, MapVote++ now sends anonymous counts to a public stats page: how many players are in your game, which map each vote picked and how, and your vote settings. Nothing that identifies you, your game or your players is sent or kept. Turn it off with the new `ShareAnonymousStats` setting. The README's [Anonymous stats](https://github.com/RoryDotGG/REPO-MapVotePlusPlus#anonymous-stats) section lists exactly what is sent.
+- Players and hosts on 1.2.0 can still vote together with 1.3.0.
 
 ## 1.2.0
 
